@@ -1,18 +1,26 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { pool } from "./db.js";
 
 dotenv.config();
 
 const app = express();
 
-// Middleware
 app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());
 
-// Ruta de prueba
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, message: "API UNICEN SoftSkills funcionando" });
+});
+
+app.get("/api/db-test", async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT 1 AS test");
+    res.json({ ok: true, rows });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 const PORT = process.env.PORT || 5000;
