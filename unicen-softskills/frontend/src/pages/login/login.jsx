@@ -60,7 +60,12 @@ export default function Login() {
       <div className="login-container">
         <div className="university-badge">Plataforma Académica</div>
 
-        <div className="logo">EPSICO</div>
+        <div className="unicen-logo-wrapper">
+  <img src="/unicen.png" alt="UNICEN" className="unicen-logo" />
+</div>
+
+<div className="logo">SUAT</div>
+
         <div className="subtitle">
           Sistema Universitario de Apoyo a la Toma de Decisiones
         </div>
