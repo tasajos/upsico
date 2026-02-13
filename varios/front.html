@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPSICO - UNICEN</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            /* 🎓 PALETA UNIVERSITARIA PROFESIONAL */
+            background: linear-gradient(135deg, 
+                #1e3a8a 0%,      /* Azul institucional profundo */
+                #1e40af 30%,     /* Azul académico */
+                #3b82f6 70%,     /* Azul cielo confianza */
+                #60a5fa 100%     /* Azul claro profesional */
+            );
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ✨ Patrón sutil académico */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(59,130,246,0.03) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .login-container {
+            background: rgba(255,255,255,0.97);
+            backdrop-filter: blur(25px);
+            border-radius: 24px;
+            box-shadow: 
+                0 35px 60px -15px rgba(30,58,138,0.4),
+                0 0 0 1px rgba(255,255,255,0.6),
+                inset 0 1px 0 rgba(255,255,255,0.8);
+            padding: 56px 48px;
+            width: 100%;
+            max-width: 440px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .university-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #1e3a8a, #1e40af);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            box-shadow: 0 8px 20px rgba(30,58,138,0.3);
+        }
+
+        .logo {
+            font-size: 2.8rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #1e3a8a, #1d4ed8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            letter-spacing: -0.03em;
+        }
+
+        .subtitle { 
+            color: #475569; 
+            font-size: 1.15rem; 
+            font-weight: 600; 
+            margin-bottom: 44px; 
+            line-height: 1.6;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 28px;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 24px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94A3B8;
+            font-size: 1.25rem;
+            z-index: 2;
+        }
+
+        input {
+            width: 100%;
+            padding: 22px 24px 22px 64px !important;
+            border: 2px solid #E2E8F0;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: 500;
+            background: linear-gradient(145deg, #fafbff, #f8fafc);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #1e40af;
+            background: white;
+            box-shadow: 
+                0 0 0 4px rgba(30,64,175,0.1),
+                0 8px 25px rgba(30,64,175,0.15);
+            transform: translateY(-1px);
+        }
+
+        input::placeholder {
+            color: #9CA3AF;
+            font-weight: 400;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 22px;
+            background: linear-gradient(135deg, #1e40af, #1d4ed8);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 28px;
+            letter-spacing: 0.025em;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .login-btn:hover:not(:disabled)::before {
+            left: 100%;
+        }
+
+        .login-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 35px rgba(30,64,175,0.4);
+        }
+
+        .links { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 14px; 
+            margin-bottom: 32px;
+        }
+
+        .link { 
+            color: #64748B; 
+            text-decoration: none; 
+            font-size: 0.98rem; 
+            font-weight: 600; 
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .link:hover {
+            color: #1e40af;
+            transform: translateX(4px);
+        }
+
+        .footer-text {
+            padding-top: 28px;
+            border-top: 1px solid #E2E8F0;
+            color: #6B7280;
+            font-size: 0.92rem;
+            font-weight: 600;
+            letter-spacing: 0.025em;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="university-badge">Plataforma Académica</div>
+        
+        <div class="logo">EPSICO</div>
+        <div class="subtitle">
+            Sistema Universitario de Apoyo a la Toma de Decisiones
+        </div>
+        
+        <form id="loginForm">
+            <div class="input-group">
+                <span class="input-icon">📧</span>
+                <input type="email" id="email" placeholder="usuario@universidad.edu" required>
+            </div>
+            
+            <div class="input-group">
+                <span class="input-icon">🔒</span>
+                <input type="password" id="password" placeholder="Contraseña segura" required>
+            </div>
+            
+            <button type="submit" class="login-btn">
+                🎓 Acceder al Sistema
+            </button>
+        </form>
+        
+        <div class="links">
+            <a href="#" class="link">¿Problemas para iniciar sesión?</a>
+            <a href="#" class="link">Solicitar acceso institucional</a>
+        </div>
+        
+        <div class="footer-text">
+            🔐 Autenticación 
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (email && password) {
+                // 🎓 Simulación login universitario
+                document.querySelector('.login-btn').innerHTML = '✅ Acceso Autorizado';
+                document.querySelector('.login-btn').style.background = '#059669';
+                setTimeout(() => {
+                    alert('🎓 ¡Bienvenido al sistema EPSICO!\n\nUsuario: ' + email + '\n\nRedirigiendo al dashboard académico...');
+                }, 800);
+            } else {
+                alert('⚠️ Complete todos los campos académicos');
+            }
+        });
+    </script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</body>
+</html>
+  
