@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import "../login/login.css";
 
 export default function Login() {
@@ -8,6 +10,8 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState("idle"); // idle | success | error
   const [errorMsg, setErrorMsg] = useState("");
+  const navigate = useNavigate();
+
 
   const canSubmit = useMemo(() => {
     return email.trim().length > 0 && password.trim().length > 0 && !isSubmitting;
@@ -35,10 +39,8 @@ export default function Login() {
       setStatus("success");
 
       // Simulación de redirección
-      setTimeout(() => {
-        alert(
-          `🎓 ¡Bienvenido al sistema EPSICO!\n\nUsuario: ${email}\n\nRedirigiendo al dashboard académico...`
-        );
+          setTimeout(() => {
+        navigate("/admin");
       }, 300);
     } catch (err) {
       setStatus("error");

@@ -1,0 +1,261 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+.admin-shell {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 30%, #3b82f6 70%, #60a5fa 100%);
+  overflow-x: hidden;
+  font-family: Inter, system-ui, sans-serif;
+  color: #1f2937;
+}
+
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100vh;
+  background: rgba(255,255,255,0.97);
+  backdrop-filter: blur(25px);
+  box-shadow: 0 35px 60px -15px rgba(30,58,138,0.4);
+  padding: 32px 24px;
+  transition: transform 0.3s ease;
+  z-index: 1000;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 48px;
+}
+
+.sidebar-logo {
+  font-size: 1.8rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #1e3a8a, #1d4ed8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.role-badge {
+  font-size: 0.85rem;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #1e3a8a, #1e40af);
+  color: white;
+  font-weight: 800;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  color: #475569;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  color: #1e40af;
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(30,64,175,0.1);
+}
+
+.nav-icon { font-size: 1.25rem; }
+
+/* Main */
+.main-content {
+  margin-left: 280px;
+  padding: 48px;
+  min-height: 100vh;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(10px);
+}
+
+.dashboard-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #1e3a8a;
+  margin-bottom: 32px;
+}
+
+.indicators-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 32px;
+}
+
+.indicator-card {
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(30,58,138,0.1);
+  padding: 32px;
+  transition: all 0.3s ease;
+}
+
+.indicator-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 25px 50px rgba(30,58,138,0.2);
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 24px;
+}
+
+.card-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #1e3a8a;
+  margin-bottom: 16px;
+}
+
+.card-description {
+  color: #64748b;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Charts */
+.chart-placeholder {
+  height: 150px;
+  background: #eff6ff;
+  border-radius: 12px;
+  margin-top: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.chart-bar {
+  position: absolute;
+  bottom: 0;
+  background: linear-gradient(0deg, #1e40af, #3b82f6);
+  width: 40px;
+  height: 0%;
+  transition: height 0.9s ease;
+  border-radius: 10px 10px 0 0;
+}
+
+.chart-bar.light {
+  background: #60a5fa;
+}
+
+.weak-list {
+  list-style: none;
+  padding: 0;
+  color: #64748b;
+  font-size: 1rem;
+  line-height: 1.9;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.pie {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: conic-gradient(
+    #1e40af 0% 45%,
+    #3b82f6 45% 52%,
+    #60a5fa 52% 58%,
+    #eff6ff 58% 100%
+  );
+}
+
+/* Mobile */
+.menu-toggle {
+  display: none;
+}
+
+.overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 72px 18px 24px;
+    border-radius: 0;
+  }
+
+  .dashboard-title {
+    font-size: 2rem;
+  }
+
+  .menu-toggle {
+    display: block;
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    z-index: 1100;
+    background: white;
+    border: none;
+    padding: 12px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 10px 25px rgba(30, 58, 138, 0.18);
+    font-size: 18px;
+  }
+
+  .overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    background: rgba(15, 23, 42, 0.35);
+  }
+}
+
+
+.sidebar-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 48px;
+}
+
+.sidebar-logo-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.sidebar-unicen-logo {
+  height: 55px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 14px rgba(30, 58, 138, 0.25));
+}
+
+.sidebar-title-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
