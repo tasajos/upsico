@@ -22,52 +22,198 @@ const MODULOS = [
   { key: "impacto", icon: "🎯", title: "Indicadores de impacto", desc: "Configurar • Revisar • Exportar" },
 ];
 
+// Estados de celda
+const CELL = {
+  NO: "NO",          // —
+  PARCIAL: "PARCIAL",// ◐
+  DIRECTO: "DIRECTO" // ✔️
+};
+
+function cellLabel(v) {
+  if (v === CELL.DIRECTO) return "✔️";
+  if (v === CELL.PARCIAL) return "◐";
+  return "—";
+}
+
+function nextCell(v) {
+  if (v === CELL.NO) return CELL.PARCIAL;
+  if (v === CELL.PARCIAL) return CELL.DIRECTO;
+  return CELL.NO;
+}
+
 export default function GestionEvDiag() {
   const navigate = useNavigate();
 
-  // ===== Tabs =====
   const [active, setActive] = useState("evaluaciones");
-  const activeModule = useMemo(() => MODULOS.find((m) => m.key === active) || MODULOS[0], [active]);
 
-  // ===== Reportes (intentos) =====
+  // REPORTES (intentos)
   const [intentos, setIntentos] = useState([]);
   const [loadingIntentos, setLoadingIntentos] = useState(false);
   const [errorIntentos, setErrorIntentos] = useState("");
 
-  // ===== Modal detalle =====
+  // DETALLE MODAL (intentos)
   const [detalleOpen, setDetalleOpen] = useState(false);
   const [detalleLoading, setDetalleLoading] = useState(false);
   const [detalleError, setDetalleError] = useState("");
   const [detalle, setDetalle] = useState(null);
 
-  // ===== Matriz =====
-  const [catLoading, setCatLoading] = useState(false);
+  // MATRIZ (modo 1: visual, basado en el documento)
   const [matLoading, setMatLoading] = useState(false);
   const [matError, setMatError] = useState("");
 
-  const [cursos, setCursos] = useState([]);
-  const [competencias, setCompetencias] = useState([]);
-  const [matrizRows, setMatrizRows] = useState([]);
+  // Catálogos para matriz
+  const [competencias, setCompetencias] = useState([
+    "Comunicación",
+    "Trabajo en equipo",
+    "Adaptabilidad",
+    "Resolución de problemas",
+    "Gestión socioemocional",
+    "Liderazgo",
+    "Gestión del tiempo",
+  ]);
 
-  const [fCurso, setFCurso] = useState("");
-  const [fComp, setFComp] = useState("");
+  // Filas (cursos) y su matriz de celdas
+  const [matCursos, setMatCursos] = useState([
+    {
+      curso: "Habilidades de Presentación para Entrevistas Laborales",
+      cells: {
+        "Comunicación": CELL.DIRECTO,
+        "Trabajo en equipo": CELL.NO,
+        "Adaptabilidad": CELL.PARCIAL,
+        "Resolución de problemas": CELL.PARCIAL,
+        "Gestión socioemocional": CELL.DIRECTO,
+        "Liderazgo": CELL.PARCIAL,
+        "Gestión del tiempo": CELL.NO,
+      },
+    },
+    {
+      curso: "Trabajo en Equipo y Resolución de Conflictos",
+      cells: {
+        "Comunicación": CELL.DIRECTO,
+        "Trabajo en equipo": CELL.DIRECTO,
+        "Adaptabilidad": CELL.PARCIAL,
+        "Resolución de problemas": CELL.DIRECTO,
+        "Gestión socioemocional": CELL.DIRECTO,
+        "Liderazgo": CELL.PARCIAL,
+        "Gestión del tiempo": CELL.NO,
+      },
+    },
+    {
+      curso: "Motivación, Coaching y Gestión de Equipos",
+      cells: {
+        "Comunicación": CELL.PARCIAL,
+        "Trabajo en equipo": CELL.DIRECTO,
+        "Adaptabilidad": CELL.DIRECTO,
+        "Resolución de problemas": CELL.DIRECTO,
+        "Gestión socioemocional": CELL.DIRECTO,
+        "Liderazgo": CELL.DIRECTO,
+        "Gestión del tiempo": CELL.NO,
+      },
+    },
+    {
+      curso: "Inteligencia Emocional aplicada al Trabajo",
+      cells: {
+        "Comunicación": CELL.DIRECTO,
+        "Trabajo en equipo": CELL.PARCIAL,
+        "Adaptabilidad": CELL.DIRECTO,
+        "Resolución de problemas": CELL.PARCIAL,
+        "Gestión socioemocional": CELL.DIRECTO,
+        "Liderazgo": CELL.PARCIAL,
+        "Gestión del tiempo": CELL.NO,
+      },
+    },
+    {
+      curso: "Gestión del Tiempo y Productividad Personal",
+      cells: {
+        "Comunicación": CELL.NO,
+        "Trabajo en equipo": CELL.NO,
+        "Adaptabilidad": CELL.DIRECTO,
+        "Resolución de problemas": CELL.PARCIAL,
+        "Gestión socioemocional": CELL.DIRECTO,
+        "Liderazgo": CELL.PARCIAL,
+        "Gestión del tiempo": CELL.DIRECTO,
+      },
+    },
+    {
+      curso: "Elaboración Estratégica de CV",
+      cells: {
+        "Comunicación": CELL.DIRECTO,
+        "Trabajo en equipo": CELL.NO,
+        "Adaptabilidad": CELL.PARCIAL,
+        "Resolución de problemas": CELL.PARCIAL,
+        "Gestión socioemocional": CELL.PARCIAL,
+        "Liderazgo": CELL.NO,
+        "Gestión del tiempo": CELL.PARCIAL,
+      },
+    },
+    {
+      curso: "Networking Digital y Búsqueda de Empleo en Línea",
+      cells: {
+        "Comunicación": CELL.DIRECTO,
+        "Trabajo en equipo": CELL.PARCIAL,
+        "Adaptabilidad": CELL.DIRECTO,
+        "Resolución de problemas": CELL.PARCIAL,
+        "Gestión socioemocional": CELL.PARCIAL,
+        "Liderazgo": CELL.PARCIAL,
+        "Gestión del tiempo": CELL.PARCIAL,
+      },
+    },
+    {
+      curso: "Mentalidad Emprendedora y Autoliderazgo",
+      cells: {
+        "Comunicación": CELL.PARCIAL,
+        "Trabajo en equipo": CELL.PARCIAL,
+        "Adaptabilidad": CELL.DIRECTO,
+        "Resolución de problemas": CELL.DIRECTO,
+        "Gestión socioemocional": CELL.DIRECTO,
+        "Liderazgo": CELL.DIRECTO,
+        "Gestión del tiempo": CELL.PARCIAL,
+      },
+    },
+    {
+      curso: "Comunicación Efectiva y Pitch de Negocios",
+      cells: {
+        "Comunicación": CELL.DIRECTO,
+        "Trabajo en equipo": CELL.PARCIAL,
+        "Adaptabilidad": CELL.PARCIAL,
+        "Resolución de problemas": CELL.DIRECTO,
+        "Gestión socioemocional": CELL.DIRECTO,
+        "Liderazgo": CELL.DIRECTO,
+        "Gestión del tiempo": CELL.NO,
+      },
+    },
+    {
+      curso: "Transición Profesional al Mundo Laboral",
+      cells: {
+        "Comunicación": CELL.DIRECTO,
+        "Trabajo en equipo": CELL.DIRECTO,
+        "Adaptabilidad": CELL.DIRECTO,
+        "Resolución de problemas": CELL.DIRECTO,
+        "Gestión socioemocional": CELL.DIRECTO,
+        "Liderazgo": CELL.PARCIAL,
+        "Gestión del tiempo": CELL.PARCIAL,
+      },
+    },
+    {
+      curso: "Cursos Internacionales (3)",
+      cells: {
+        "Comunicación": CELL.DIRECTO,
+        "Trabajo en equipo": CELL.DIRECTO,
+        "Adaptabilidad": CELL.DIRECTO,
+        "Resolución de problemas": CELL.DIRECTO,
+        "Gestión socioemocional": CELL.DIRECTO,
+        "Liderazgo": CELL.DIRECTO,
+        "Gestión del tiempo": CELL.PARCIAL,
+      },
+    },
+  ]);
 
-  const [addOpen, setAddOpen] = useState(false);
-  const [addCurso, setAddCurso] = useState("");
-  const [addComp, setAddComp] = useState("");
-  const [addPeso, setAddPeso] = useState("25");
-
-  // ===== KPI header (mock) =====
-  const kpis = useMemo(
-    () => [
-      { label: "Estado", value: "Activo", hint: "Test disponible" },
-      { label: "Periodo", value: "2026-I", hint: "Editable luego" },
-      { label: "Cobertura", value: "—", hint: "Se calculará con BD" },
-    ],
-    []
+  const activeModule = useMemo(
+    () => MODULOS.find((m) => m.key === active) || MODULOS[0],
+    [active]
   );
 
-  // ✅ Hook 1: cargar intentos SOLO al entrar a reportes
+  // ✅ HOOK 1: cargar intentos SOLO si active === "reportes"
   useEffect(() => {
     let mounted = true;
 
@@ -86,56 +232,23 @@ export default function GestionEvDiag() {
     }
 
     if (active === "reportes") loadIntentos();
-    return () => {
-      mounted = false;
-    };
+    return () => (mounted = false);
   }, [active]);
 
-  // ✅ Hook 2: cargar catálogos SOLO al entrar a matriz (una sola vez por entrada)
+  // ✅ HOOK 2: si luego quieres traer matriz desde API/BD, aquí va (sin romper hooks)
   useEffect(() => {
     let mounted = true;
 
-    async function loadCatalogos() {
+    async function loadMatrizFromApi() {
       try {
-        setCatLoading(true);
-        setMatError("");
-        const data = await apiJson(`${API}/matriz/catalogos`);
-        if (!mounted) return;
-        setCursos(data.cursos || []);
-        setCompetencias(data.competencias || []);
-      } catch (e) {
-        if (mounted) setMatError(e.message || "Error cargando catálogos.");
-      } finally {
-        if (mounted) setCatLoading(false);
-      }
-    }
-
-    if (active === "matriz") loadCatalogos();
-
-    return () => {
-      mounted = false;
-    };
-  }, [active]);
-
-  // ✅ Hook 3: cargar matriz cuando estoy en matriz y cambian filtros
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadMatriz() {
-      try {
-        if (active !== "matriz") return;
         setMatLoading(true);
         setMatError("");
 
-        const qs = new URLSearchParams();
-        if (fCurso) qs.set("curso_id", fCurso);
-        if (fComp) qs.set("competencia_id", fComp);
+        // Por ahora lo dejamos comentado (modo 1: matriz local basada en documento)
+        // const data = await apiJson(`${API}/matriz`);
+        // if (!mounted) return;
+        // ... setCompetencias / setMatCursos
 
-        const url = `${API}/matriz${qs.toString() ? `?${qs.toString()}` : ""}`;
-        const data = await apiJson(url);
-
-        if (!mounted) return;
-        setMatrizRows(data.rows || []);
       } catch (e) {
         if (mounted) setMatError(e.message || "Error cargando matriz.");
       } finally {
@@ -143,13 +256,19 @@ export default function GestionEvDiag() {
       }
     }
 
-    loadMatriz();
-    return () => {
-      mounted = false;
-    };
-  }, [active, fCurso, fComp]);
+    if (active === "matriz") loadMatrizFromApi();
+    return () => (mounted = false);
+  }, [active]);
 
-  // ===== Detalle =====
+  const kpis = useMemo(
+    () => [
+      { label: "Estado", value: "Activo", hint: "Test disponible" },
+      { label: "Periodo", value: "2026-I", hint: "Editable luego" },
+      { label: "Cobertura", value: "—", hint: "Se calculará con BD" },
+    ],
+    []
+  );
+
   const closeDetalle = () => {
     setDetalleOpen(false);
     setDetalle(null);
@@ -164,7 +283,7 @@ export default function GestionEvDiag() {
       setDetalle(null);
 
       const data = await apiJson(`${API}/diagnostico/intentos/${id}`);
-      setDetalle(data); // { ok:true, intento, respuestas }
+      setDetalle(data);
     } catch (e) {
       setDetalleError(e.message || "No se pudo cargar el detalle.");
     } finally {
@@ -172,54 +291,19 @@ export default function GestionEvDiag() {
     }
   };
 
-  // ===== Matriz actions =====
-  const reloadMatriz = async () => {
-    const qs = new URLSearchParams();
-    if (fCurso) qs.set("curso_id", fCurso);
-    if (fComp) qs.set("competencia_id", fComp);
-    const url = `${API}/matriz${qs.toString() ? `?${qs.toString()}` : ""}`;
-    const data = await apiJson(url);
-    setMatrizRows(data.rows || []);
+  // ✅ editar una celda de matriz (cicla — → ◐ → ✔️)
+  const toggleCell = (cursoIdx, compName) => {
+    setMatCursos((prev) => {
+      const copy = [...prev];
+      const row = { ...copy[cursoIdx] };
+      const cells = { ...row.cells };
+      cells[compName] = nextCell(cells[compName] || CELL.NO);
+      row.cells = cells;
+      copy[cursoIdx] = row;
+      return copy;
+    });
   };
 
-  const createRelacion = async () => {
-    try {
-      setMatError("");
-      const payload = { curso_id: addCurso, competencia_id: addComp, peso: Number(addPeso) };
-      await apiJson(`${API}/matriz`, { method: "POST", body: JSON.stringify(payload) });
-
-      setAddOpen(false);
-      setAddCurso("");
-      setAddComp("");
-      setAddPeso("25");
-
-      await reloadMatriz();
-    } catch (e) {
-      setMatError(e.message || "No se pudo crear la relación.");
-    }
-  };
-
-  const updatePeso = async (id, peso) => {
-    try {
-      setMatError("");
-      await apiJson(`${API}/matriz/${id}`, { method: "PUT", body: JSON.stringify({ peso: Number(peso) }) });
-      // opcional: recargar o confiar en el blur
-    } catch (e) {
-      setMatError(e.message || "No se pudo actualizar el peso.");
-    }
-  };
-
-  const removeRelacion = async (id) => {
-    try {
-      setMatError("");
-      await apiJson(`${API}/matriz/${id}`, { method: "DELETE" });
-      await reloadMatriz();
-    } catch (e) {
-      setMatError(e.message || "No se pudo desactivar la relación.");
-    }
-  };
-
-  // ===== UI por módulo =====
   function renderModuleBody() {
     if (active === "evaluaciones") {
       return (
@@ -245,9 +329,7 @@ export default function GestionEvDiag() {
       return (
         <div className="ged-work">
           <div className="ged-work-title">Reportes</div>
-          <div className="ged-work-text">
-            Listado de intentos enviados. Luego aquí generaremos reporte individual e institucional.
-          </div>
+          <div className="ged-work-text">Listado de intentos enviados.</div>
 
           {loadingIntentos && <div style={{ marginTop: 12 }}>Cargando intentos...</div>}
           {errorIntentos && (
@@ -315,40 +397,13 @@ export default function GestionEvDiag() {
         <div className="ged-work">
           <div className="ged-work-title">Matriz cursos vs competencias</div>
           <div className="ged-work-text">
-            Mapea cursos del COL → competencias blandas. Define el <b>peso (%)</b> para recomendaciones.
+            Basada en el documento COL. Click en una celda para cambiar: <b>— → ◐ → ✔️</b>
           </div>
 
-          <div className="ged-mat-toolbar">
-            <div className="ged-mat-filters">
-              <label className="ged-mat-field">
-                <span>Curso</span>
-                <select value={fCurso} onChange={(e) => setFCurso(e.target.value)} disabled={catLoading}>
-                  <option value="">Todos</option>
-                  {cursos.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                      {c.codigo ? ` (${c.codigo})` : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="ged-mat-field">
-                <span>Competencia</span>
-                <select value={fComp} onChange={(e) => setFComp(e.target.value)} disabled={catLoading}>
-                  <option value="">Todas</option>
-                  {competencias.map((cp) => (
-                    <option key={cp.id} value={cp.id}>
-                      {cp.nombre}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <button type="button" className="ged-btn ged-btn-primary" onClick={() => setAddOpen(true)}>
-              ＋ Agregar relación
-            </button>
+          <div className="ged-legend">
+            <span><b>✔️</b> Desarrollo directo</span>
+            <span><b>◐</b> Desarrollo parcial</span>
+            <span><b>—</b> No aborda explícito</span>
           </div>
 
           {matError && (
@@ -360,121 +415,53 @@ export default function GestionEvDiag() {
           {matLoading ? (
             <div style={{ marginTop: 12 }}>Cargando matriz...</div>
           ) : (
-            <div className="ged-mat-tablewrap" style={{ marginTop: 12 }}>
-              <table className="ged-mat-table">
+            <div className="ged-matrix-wrap" style={{ marginTop: 12 }}>
+              <table className="ged-matrix">
                 <thead>
                   <tr>
-                    <th>Curso</th>
-                    <th>Competencia</th>
-                    <th style={{ width: 170 }}>Peso (%)</th>
-                    <th style={{ width: 130 }}></th>
+                    <th className="ged-matrix-sticky">Cursos COL / Habilidades</th>
+                    {competencias.map((c) => (
+                      <th key={c}>{c}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {matrizRows.map((r) => (
-                    <tr key={r.id}>
-                      <td>
-                        <div className="ged-mat-course">
-                          <b>{r.curso_nombre}</b>
-                          <span>{r.curso_codigo || "—"}</span>
-                        </div>
+                  {matCursos.map((row, idx) => (
+                    <tr key={row.curso}>
+                      <td className="ged-matrix-sticky-row">
+                        <div className="ged-matrix-course">{row.curso}</div>
                       </td>
-                      <td>{r.competencia_nombre}</td>
-                      <td>
-                        <input
-                          className="ged-mat-weight"
-                          type="number"
-                          min="0"
-                          max="100"
-                          defaultValue={r.peso}
-                          onBlur={(e) => updatePeso(r.id, e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <button type="button" className="ged-mini" onClick={() => removeRelacion(r.id)}>
-                          Desactivar
-                        </button>
-                      </td>
+
+                      {competencias.map((comp) => {
+                        const v = row.cells?.[comp] || CELL.NO;
+                        return (
+                          <td key={comp}>
+                            <button
+                              type="button"
+                              className={`ged-matrix-cell ${v.toLowerCase?.() || ""}`}
+                              onClick={() => toggleCell(idx, comp)}
+                              title={`Click para cambiar (${cellLabel(v)})`}
+                            >
+                              {cellLabel(v)}
+                            </button>
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
-
-                  {!matrizRows.length && (
-                    <tr>
-                      <td colSpan={4} style={{ padding: 12, color: "#64748b", fontWeight: 800 }}>
-                        No hay relaciones aún. Presiona “Agregar relación”.
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>
           )}
 
-          {/* Modal agregar relación */}
-          {addOpen && (
-            <div className="ged-modal-overlay" onClick={() => setAddOpen(false)} role="dialog" aria-modal="true">
-              <div className="ged-modal" onClick={(e) => e.stopPropagation()}>
-                <div className="ged-modal-head">
-                  <div>
-                    <h3 className="ged-modal-title">Agregar relación</h3>
-                    <p className="ged-modal-sub">Selecciona curso, competencia y peso.</p>
-                  </div>
-                  <button className="ged-modal-close" type="button" onClick={() => setAddOpen(false)}>
-                    ✕
-                  </button>
-                </div>
-
-                <div className="ged-modal-body">
-                  <div className="ged-mat-addgrid">
-                    <label className="ged-mat-field">
-                      <span>Curso</span>
-                      <select value={addCurso} onChange={(e) => setAddCurso(e.target.value)}>
-                        <option value="">Selecciona…</option>
-                        {cursos.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.nombre}
-                            {c.codigo ? ` (${c.codigo})` : ""}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="ged-mat-field">
-                      <span>Competencia</span>
-                      <select value={addComp} onChange={(e) => setAddComp(e.target.value)}>
-                        <option value="">Selecciona…</option>
-                        {competencias.map((cp) => (
-                          <option key={cp.id} value={cp.id}>
-                            {cp.nombre}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="ged-mat-field">
-                      <span>Peso (%)</span>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={addPeso}
-                        onChange={(e) => setAddPeso(e.target.value)}
-                      />
-                    </label>
-                  </div>
-
-                  <div className="ged-modal-actions">
-                    <button className="ged-btn ged-btn-primary" type="button" disabled={!addCurso || !addComp} onClick={createRelacion}>
-                      Guardar
-                    </button>
-                    <button className="ged-btn ged-btn-ghost" type="button" onClick={() => setAddOpen(false)}>
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          <div className="ged-work-actions" style={{ marginTop: 12 }}>
+            <button type="button" className="ged-btn ged-btn-soft" onClick={() => alert("Luego: guardar en BD/API")}>
+              💾 Guardar cambios
+            </button>
+            <button type="button" className="ged-btn ged-btn-ghost" onClick={() => alert("Luego: exportar PDF/Excel")}>
+              ⬇️ Exportar matriz
+            </button>
+          </div>
         </div>
       );
     }
@@ -491,7 +478,9 @@ export default function GestionEvDiag() {
     return (
       <div className="ged-work">
         <div className="ged-work-title">Indicadores de impacto</div>
-        <div className="ged-work-text">Aquí verás KPIs institucionales: % en básico/funcional/avanzado, evolución, cobertura, etc.</div>
+        <div className="ged-work-text">
+          Aquí verás KPIs institucionales: % en básico/funcional/avanzado, evolución, cobertura, etc.
+        </div>
       </div>
     );
   }
@@ -532,7 +521,12 @@ export default function GestionEvDiag() {
               {MODULOS.map((m) => {
                 const isActive = m.key === active;
                 return (
-                  <button key={m.key} type="button" className={`ged-mod ${isActive ? "active" : ""}`} onClick={() => setActive(m.key)}>
+                  <button
+                    key={m.key}
+                    type="button"
+                    className={`ged-mod ${isActive ? "active" : ""}`}
+                    onClick={() => setActive(m.key)}
+                  >
                     <div className="ged-mod-ico">{m.icon}</div>
                     <div className="ged-mod-body">
                       <div className="ged-mod-title">{m.title}</div>
@@ -546,7 +540,7 @@ export default function GestionEvDiag() {
 
             <div className="ged-tip">
               <b>Tip</b>
-              <p>“Reportes” muestra intentos reales. “Matriz” ya usa catálogo + relaciones desde la API.</p>
+              <p>“Reportes” ya muestra intentos reales. “Matriz” está basada en el documento.</p>
             </div>
           </div>
         </aside>
@@ -582,7 +576,7 @@ export default function GestionEvDiag() {
         </main>
       </div>
 
-      {/* Modal detalle (reportes) */}
+      {/* MODAL DETALLE (igual al tuyo) */}
       {detalleOpen && (
         <div className="ged-modal-overlay" onClick={closeDetalle} role="dialog" aria-modal="true">
           <div className="ged-modal" onClick={(e) => e.stopPropagation()}>
@@ -641,9 +635,9 @@ export default function GestionEvDiag() {
                   <table className="ged-det-table">
                     <thead>
                       <tr>
-                        <th style={{ width: 70 }}>#</th>
+                        <th>#</th>
                         <th>Enunciado</th>
-                        <th style={{ width: 120 }}>Valor</th>
+                        <th>Valor</th>
                       </tr>
                     </thead>
                     <tbody>

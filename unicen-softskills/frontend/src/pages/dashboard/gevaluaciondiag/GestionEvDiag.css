@@ -1329,3 +1329,99 @@
   .ged-mat-addgrid{ grid-template-columns: 1fr; }
   .ged-mat-field{ min-width: 100%; }
 }
+
+/* ===== MATRIZ CURSOS vs COMPETENCIAS ===== */
+.ged-legend{
+  margin-top: 10px;
+  display:flex;
+  gap:14px;
+  flex-wrap:wrap;
+  color:#334155;
+  font-weight:800;
+  font-size: 13px;
+}
+
+.ged-matrix-wrap{
+  overflow:auto;
+  border-radius: 16px;
+  border: 1px solid rgba(226,232,240,.95);
+  background: #fff;
+  box-shadow: 0 16px 34px rgba(30,58,138,.08);
+}
+
+.ged-matrix{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 900px;
+}
+
+.ged-matrix thead th{
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #1e3a8a;
+  color: #fff;
+  font-weight: 950;
+  padding: 12px;
+  border-right: 1px solid rgba(255,255,255,.18);
+  white-space: nowrap;
+}
+
+.ged-matrix thead th:last-child{ border-right: 0; }
+
+.ged-matrix td{
+  border-top: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  padding: 10px;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.ged-matrix tr td:last-child{ border-right: 0; }
+
+/* Primera columna sticky */
+.ged-matrix-sticky{
+  left: 0;
+  z-index: 3;
+  min-width: 320px;
+}
+
+.ged-matrix-sticky-row{
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #f8fafc;
+  text-align: left !important;
+  padding: 12px !important;
+  min-width: 320px;
+}
+
+.ged-matrix-course{
+  font-weight: 900;
+  color:#0f172a;
+  line-height: 1.25;
+}
+
+/* Botón celda */
+.ged-matrix-cell{
+  width: 42px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(226,232,240,.95);
+  background: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 900;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+
+.ged-matrix-cell:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(30,58,138,.12);
+  border-color: rgba(30,64,175,.25);
+}
+
+.ged-matrix-cell.no{ color:#64748b; background: #fff; }
+.ged-matrix-cell.parcial{ background: rgba(99,102,241,.10); }
+.ged-matrix-cell.directo{ background: rgba(16,185,129,.14); }
