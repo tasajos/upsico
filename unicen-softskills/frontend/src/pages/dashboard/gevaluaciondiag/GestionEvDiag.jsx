@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./GestionEvDiag.css";
+import MatrizCursosCompetencias from "./MatrizCursosCompetencias";
 
 const API = "http://localhost:5000/api";
 
@@ -237,28 +238,35 @@ export default function GestionEvDiag() {
 
   // ✅ HOOK 2: si luego quieres traer matriz desde API/BD, aquí va (sin romper hooks)
   useEffect(() => {
-    let mounted = true;
+  let mounted = true;
 
-    async function loadMatrizFromApi() {
-      try {
-        setMatLoading(true);
-        setMatError("");
+  async function loadMatrizFromApi() {
+    try {
+      setMatLoading(true);
+      setMatError("");
 
-        // Por ahora lo dejamos comentado (modo 1: matriz local basada en documento)
-        // const data = await apiJson(`${API}/matriz`);
-        // if (!mounted) return;
-        // ... setCompetencias / setMatCursos
+      // Por ahora lo dejamos comentado (modo 1: matriz local basada en documento)
+      // const data = await apiJson(`${API}/matriz`);
+      // if (!mounted) return;
+      // setCompetencias(data.competencias || []);
+      // setMatCursos(data.cursos || []);
 
-      } catch (e) {
-        if (mounted) setMatError(e.message || "Error cargando matriz.");
-      } finally {
-        if (mounted) setMatLoading(false);
-      }
+    } catch (e) {
+      if (mounted) setMatError(e.message || "Error cargando matriz.");
+    } finally {
+      if (mounted) setMatLoading(false);
     }
+  }
 
-    if (active === "matriz") loadMatrizFromApi();
-    return () => (mounted = false);
-  }, [active]);
+  if (active === "matriz") {
+    // Si más adelante traes de API, descomenta:
+    // loadMatrizFromApi();
+  }
+
+  return () => {
+    mounted = false;
+  };
+}, [active]);
 
   const kpis = useMemo(
     () => [
