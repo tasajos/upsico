@@ -28,6 +28,10 @@ export default function GestionEvDiag() {
   const [intentos, setIntentos] = useState([]);
   const [loadingIntentos, setLoadingIntentos] = useState(false);
   const [errorIntentos, setErrorIntentos] = useState("");
+  const [detalleOpen, setDetalleOpen] = useState(false);
+  const [detalleLoading, setDetalleLoading] = useState(false);
+  const [detalleError, setDetalleError] = useState("");
+  const [detalle, setDetalle] = useState(null); 
 
   const activeModule = useMemo(
     () => MODULOS.find((m) => m.key === active) || MODULOS[0],
@@ -64,6 +68,28 @@ export default function GestionEvDiag() {
     ],
     []
   );
+
+  const closeDetalle = () => {
+  setDetalleOpen(false);
+  setDetalle(null);
+  setDetalleError("");
+};
+
+const openDetalle = async (id) => {
+  try {
+    setDetalleOpen(true);
+    setDetalleLoading(true);
+    setDetalleError("");
+    setDetalle(null);
+
+    const data = await apiJson(`${API}/diagnostico/intentos/${id}`);
+    setDetalle(data); // { ok:true, intento, respuestas }
+  } catch (e) {
+    setDetalleError(e.message || "No se pudo cargar el detalle.");
+  } finally {
+    setDetalleLoading(false);
+  }
+};
 
   function renderModuleBody() {
     // 1) Evaluaciones (por ahora: guía y acceso directo al test)
@@ -132,7 +158,7 @@ export default function GestionEvDiag() {
                         <button
                           type="button"
                           className="ged-chip"
-                          onClick={() => alert(`Detalle intento ${it.id} (luego lo abrimos en otra vista o modal)`) }
+                          onClick={() => openDetalle(it.id)}
                         >
                           📄 Ver detalle
                         </button>
@@ -287,6 +313,93 @@ export default function GestionEvDiag() {
           </section>
         </main>
       </div>
+
+      {detalleOpen && (
+  <div className="ged-modal-overlay" onClick={closeDetalle} role="dialog" aria-modal="true">
+    <div className="ged-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="ged-modal-head">
+        <div>
+          <h3 className="ged-modal-title">Detalle del intento</h3>
+          <p className="ged-modal-sub">
+            {detalle?.intento?.estudiante_nombre ? `Estudiante: ${detalle.intento.estudiante_nombre}` : "—"}
+          </p>
+        </div>
+        <button type="button" className="ged-modal-close" onClick={closeDetalle}>
+          ✕
+        </button>
+      </div>
+
+      {detalleLoading && <div className="ged-modal-body">Cargando detalle...</div>}
+
+      {!detalleLoading && detalleError && (
+        <div className="ged-modal-body">
+          <div className="td-alert" role="alert">{detalleError}</div>
+        </div>
+      )}
+
+      {!detalleLoading && !detalleError && detalle?.intento && (
+        <div className="ged-modal-body">
+          <div className="ged-det-kpis">
+            <div className="ged-det-kpi">
+              <span>ID</span>
+              <b>{detalle.intento.id}</b>
+            </div>
+            <div className="ged-det-kpi">
+              <span>Carrera</span>
+              <b>{detalle.intento.carrera}</b>
+            </div>
+            <div className="ged-det-kpi">
+              <span>Semestre</span>
+              <b>{detalle.intento.semestre}</b>
+            </div>
+            <div className="ged-det-kpi">
+              <span>Fecha</span>
+              <b>{String(detalle.intento.fecha_aplicacion).slice(0, 10)}</b>
+            </div>
+            <div className="ged-det-kpi">
+              <span>Puntaje</span>
+              <b style={{ color: "#1e40af" }}>{detalle.intento.total_puntaje}</b>
+            </div>
+            <div className="ged-det-kpi">
+              <span>Nivel</span>
+              <b>{detalle.intento.nivel}</b>
+            </div>
+          </div>
+
+          <div className="ged-det-tablewrap">
+            <table className="ged-det-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Enunciado</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(detalle.respuestas || []).map((r) => (
+                  <tr key={r.pregunta_id}>
+                    <td>{r.numero}</td>
+                    <td>{r.enunciado}</td>
+                    <td><span className="ged-det-pill">{r.valor}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="ged-modal-actions">
+            <button type="button" className="ged-btn ged-btn-soft" onClick={() => alert("Exportar PDF/Excel (luego)")}>
+              ⬇️ Exportar detalle
+            </button>
+            <button type="button" className="ged-btn ged-btn-ghost" onClick={closeDetalle}>
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+)}
     </div>
   );
 }
