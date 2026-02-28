@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import "./adminDashboard.css";
 
 export default function AdminDashboard() {
@@ -48,9 +49,12 @@ export default function AdminDashboard() {
           <a className="nav-link" href="#">
             <span className="nav-icon">👥</span>Gestión de Usuarios
           </a>
-          <a className="nav-link" href="#">
-            <span className="nav-icon">📝</span>Gestión de Evaluaciones Diagnósticas
-          </a>
+
+          <Link className="nav-link" to="/admin/evaluacion-diagnostica">
+  <span className="nav-icon">📝</span>Gestión de Evaluaciones Diagnósticas
+</Link>
+
+          
           <a className="nav-link" href="#">
             <span className="nav-icon">🧮</span>Motor de Cálculo e Interpretación
           </a>
