@@ -62,6 +62,18 @@ export default function GestionEvDiag() {
   const [matLoading, setMatLoading] = useState(false);
   const [matError, setMatError] = useState("");
 
+
+
+  //compa
+  const [carList, setCarList] = useState([]);
+const [cmpCarrera, setCmpCarrera] = useState("");
+const [cmpDesde, setCmpDesde] = useState("");
+const [cmpHasta, setCmpHasta] = useState("");
+
+const [cmpLoading, setCmpLoading] = useState(false);
+const [cmpError, setCmpError] = useState("");
+const [cmpData, setCmpData] = useState(null); // { bySemestre, serie }
+
   // Catálogos para matriz
   const [competencias, setCompetencias] = useState([
     "Comunicación",
@@ -213,6 +225,53 @@ export default function GestionEvDiag() {
     () => MODULOS.find((m) => m.key === active) || MODULOS[0],
     [active]
   );
+
+
+  useEffect(() => {
+  let mounted = true;
+
+  async function loadCarreras() {
+    try {
+      const data = await apiJson(`${API}/diagnostico/carreras`);
+      if (!mounted) return;
+      setCarList(data.rows || []);
+    } catch (e) {
+      // no es fatal
+    }
+  }
+
+  if (active === "comparativo") loadCarreras();
+  return () => { mounted = false; };
+}, [active]);
+
+useEffect(() => {
+  let mounted = true;
+
+  async function loadComparativo() {
+    try {
+      if (active !== "comparativo") return;
+      setCmpLoading(true);
+      setCmpError("");
+      setCmpData(null);
+
+      const qs = new URLSearchParams();
+      if (cmpCarrera) qs.set("carrera", cmpCarrera);
+      if (cmpDesde) qs.set("desde", cmpDesde);
+      if (cmpHasta) qs.set("hasta", cmpHasta);
+
+      const data = await apiJson(`${API}/diagnostico/comparativo${qs.toString() ? `?${qs}` : ""}`);
+      if (!mounted) return;
+      setCmpData(data);
+    } catch (e) {
+      if (mounted) setCmpError(e.message || "Error cargando comparativo.");
+    } finally {
+      if (mounted) setCmpLoading(false);
+    }
+  }
+
+  loadComparativo();
+  return () => { mounted = false; };
+}, [active, cmpCarrera, cmpDesde, cmpHasta]);
 
   // ✅ HOOK 1: cargar intentos SOLO si active === "reportes"
   useEffect(() => {
@@ -474,14 +533,125 @@ export default function GestionEvDiag() {
       );
     }
 
-    if (active === "comparativo") {
-      return (
-        <div className="ged-work">
-          <div className="ged-work-title">Seguimiento comparativo</div>
-          <div className="ged-work-text">Aquí compararemos 4to vs 7mo semestre y tendencia por carrera.</div>
+  if (active === "comparativo") {
+  const rows = cmpData?.bySemestre || [];
+  const s4 = rows.find(r => String(r.semestre) === "4");
+  const s7 = rows.find(r => String(r.semestre) === "7");
+
+  return (
+    <div className="ged-work">
+      <div className="ged-work-title">Seguimiento comparativo (4to vs 7mo)</div>
+      <div className="ged-work-text">
+        Compara cantidad de intentos, puntaje promedio y distribución de niveles por semestre.
+      </div>
+
+      {/* Filtros */}
+      <div className="ged-mat-toolbar" style={{ marginTop: 12 }}>
+        <div className="ged-mat-filters">
+          <label className="ged-mat-field">
+            <span>Carrera</span>
+            <select value={cmpCarrera} onChange={(e) => setCmpCarrera(e.target.value)}>
+              <option value="">Todas</option>
+              {carList.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </label>
+
+          <label className="ged-mat-field">
+            <span>Desde</span>
+            <input type="date" value={cmpDesde} onChange={(e) => setCmpDesde(e.target.value)} />
+          </label>
+
+          <label className="ged-mat-field">
+            <span>Hasta</span>
+            <input type="date" value={cmpHasta} onChange={(e) => setCmpHasta(e.target.value)} />
+          </label>
         </div>
-      );
-    }
+
+        <button
+          type="button"
+          className="ged-btn ged-btn-soft"
+          onClick={() => { setCmpCarrera(""); setCmpDesde(""); setCmpHasta(""); }}
+        >
+          Limpiar
+        </button>
+      </div>
+
+      {cmpError && (
+        <div className="td-alert" role="alert" style={{ marginTop: 12 }}>
+          {cmpError}
+        </div>
+      )}
+
+      {cmpLoading ? (
+        <div style={{ marginTop: 12 }}>Cargando comparativo...</div>
+      ) : (
+        <>
+          {/* KPIs comparativos */}
+          <div className="ged-det-kpis" style={{ marginTop: 12, gridTemplateColumns: "repeat(3, minmax(0,1fr))" }}>
+            <div className="ged-det-kpi">
+              <span>4to semestre</span>
+              <b>{s4 ? `n=${s4.n} · avg=${s4.avg_total}` : "—"}</b>
+            </div>
+            <div className="ged-det-kpi">
+              <span>7mo semestre</span>
+              <b>{s7 ? `n=${s7.n} · avg=${s7.avg_total}` : "—"}</b>
+            </div>
+            <div className="ged-det-kpi">
+              <span>Diferencia promedio</span>
+              <b>
+                {(s4 && s7) ? `${(Number(s7.avg_total) - Number(s4.avg_total)).toFixed(2)}` : "—"}
+              </b>
+            </div>
+          </div>
+
+          {/* Tabla resumen */}
+          <div className="ged-det-tablewrap" style={{ marginTop: 12 }}>
+            <table className="ged-det-table">
+              <thead>
+                <tr>
+                  <th>Semestre</th>
+                  <th>Intentos</th>
+                  <th>Promedio</th>
+                  <th>Min</th>
+                  <th>Max</th>
+                  <th>Básico</th>
+                  <th>Funcional</th>
+                  <th>Avanzado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.semestre}>
+                    <td><b>{r.semestre}</b></td>
+                    <td>{r.n}</td>
+                    <td>{r.avg_total}</td>
+                    <td>{r.min_total}</td>
+                    <td>{r.max_total}</td>
+                    <td>{r.basico}</td>
+                    <td>{r.funcional}</td>
+                    <td>{r.avanzado}</td>
+                  </tr>
+                ))}
+                {!rows.length && (
+                  <tr>
+                    <td colSpan={8} style={{ padding: 12, color: "#64748b", fontWeight: 800 }}>
+                      No hay datos con los filtros seleccionados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Tendencia (simple) */}
+          <div style={{ marginTop: 12, color: "#475569", fontWeight: 800 }}>
+            Tendencia: (ya tienes <code>serie</code> en el endpoint). Si quieres, lo graficamos luego con una mini gráfica.
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
     return (
       <div className="ged-work">
