@@ -1,148 +1,292 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./GestionEvDiag.css";
 
-const TABS = [
-  { key: "evaluaciones", label: "Gestiona evaluaciones", icon: "📝" },
-  { key: "reportes", label: "Reportes (individual / institucional)", icon: "📊" },
-  { key: "matriz", label: "Matriz cursos vs competencias", icon: "🧩" },
-  { key: "comparativo", label: "Seguimiento comparativo", icon: "📈" },
-  { key: "impacto", label: "Indicadores de impacto", icon: "🎯" },
+const API = "http://localhost:5000/api";
+
+async function apiJson(url, options = {}) {
+  const res = await fetch(url, {
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    ...options,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.message || data?.error || "Error en la solicitud");
+  return data;
+}
+
+const MODULOS = [
+  { key: "evaluaciones", icon: "🧾", title: "Gestiona evaluaciones", desc: "Configurar • Revisar • Exportar" },
+  { key: "reportes", icon: "📊", title: "Reportes (individual / institucional)", desc: "Configurar • Revisar • Exportar" },
+  { key: "matriz", icon: "🧩", title: "Matriz cursos vs competencias", desc: "Configurar • Revisar • Exportar" },
+  { key: "comparativo", icon: "🧭", title: "Seguimiento comparativo", desc: "Configurar • Revisar • Exportar" },
+  { key: "impacto", icon: "🎯", title: "Indicadores de impacto", desc: "Configurar • Revisar • Exportar" },
 ];
 
 export default function GestionEvDiag() {
-  const [tab, setTab] = useState("evaluaciones");
-  const current = useMemo(() => TABS.find((t) => t.key === tab), [tab]);
   const navigate = useNavigate();
+  const [active, setActive] = useState("evaluaciones");
+  const [intentos, setIntentos] = useState([]);
+  const [loadingIntentos, setLoadingIntentos] = useState(false);
+  const [errorIntentos, setErrorIntentos] = useState("");
+
+  const activeModule = useMemo(
+    () => MODULOS.find((m) => m.key === active) || MODULOS[0],
+    [active]
+  );
+
+  // Cargar intentos SOLO cuando entras a "Reportes"
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadIntentos() {
+      try {
+        setLoadingIntentos(true);
+        setErrorIntentos("");
+        const data = await apiJson(`${API}/diagnostico/intentos`);
+        if (!mounted) return;
+        setIntentos(data.rows || []);
+      } catch (e) {
+        if (mounted) setErrorIntentos(e.message || "Error cargando intentos.");
+      } finally {
+        if (mounted) setLoadingIntentos(false);
+      }
+    }
+
+    if (active === "reportes") loadIntentos();
+    return () => (mounted = false);
+  }, [active]);
+
+  const kpis = useMemo(
+    () => [
+      { label: "Estado", value: "Activo", hint: "Test disponible" },
+      { label: "Periodo", value: "2026-I", hint: "Editable luego" },
+      { label: "Cobertura", value: "—", hint: "Se calculará con BD" },
+    ],
+    []
+  );
+
+  function renderModuleBody() {
+    // 1) Evaluaciones (por ahora: guía y acceso directo al test)
+    if (active === "evaluaciones") {
+      return (
+        <div className="ged-work">
+          <div className="ged-work-title">Evaluaciones</div>
+          <div className="ged-work-text">
+            Aquí podrás crear/activar un test, versionarlo y definir ventana de aplicación por carrera/semestre.
+          </div>
+
+          <div className="ged-work-actions">
+            <button type="button" className="ged-chip" onClick={() => navigate("/admin/evaluacion-diagnostica/test")}>
+              🧪 Aplicar Test
+            </button>
+            <button type="button" className="ged-chip" onClick={() => alert("Nueva evaluación (mock)")}>
+              ＋ Nueva evaluación
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // 2) Reportes (YA con datos reales: intentos)
+    if (active === "reportes") {
+      return (
+        <div className="ged-work">
+          <div className="ged-work-title">Reportes</div>
+          <div className="ged-work-text">
+            Listado de intentos enviados. Luego aquí generaremos reporte individual e institucional.
+          </div>
+
+          {loadingIntentos && <div style={{ marginTop: 12 }}>Cargando intentos...</div>}
+          {errorIntentos && (
+            <div className="td-alert" role="alert" style={{ marginTop: 12 }}>
+              {errorIntentos}
+            </div>
+          )}
+
+          {!loadingIntentos && !errorIntentos && (
+            <div style={{ marginTop: 14, overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 10px" }}>
+                <thead>
+                  <tr style={{ textAlign: "left", color: "#1e3a8a" }}>
+                    <th>ID</th>
+                    <th>Estudiante</th>
+                    <th>Carrera</th>
+                    <th>Semestre</th>
+                    <th>Fecha</th>
+                    <th>Puntaje</th>
+                    <th>Nivel</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {intentos.map((it) => (
+                    <tr key={it.id} style={{ background: "#fff", boxShadow: "0 10px 22px rgba(30,58,138,0.08)", borderRadius: 14 }}>
+                      <td style={{ padding: 12, borderRadius: "14px 0 0 14px" }}>{it.id}</td>
+                      <td style={{ padding: 12 }}>{it.estudiante_nombre}</td>
+                      <td style={{ padding: 12 }}>{it.carrera}</td>
+                      <td style={{ padding: 12 }}>{it.semestre}</td>
+                      <td style={{ padding: 12 }}>{String(it.fecha_aplicacion).slice(0, 10)}</td>
+                      <td style={{ padding: 12, fontWeight: 800, color: "#1e40af" }}>{it.total_puntaje}</td>
+                      <td style={{ padding: 12 }}>{it.nivel}</td>
+                      <td style={{ padding: 12, borderRadius: "0 14px 14px 0" }}>
+                        <button
+                          type="button"
+                          className="ged-chip"
+                          onClick={() => alert(`Detalle intento ${it.id} (luego lo abrimos en otra vista o modal)`) }
+                        >
+                          📄 Ver detalle
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {!intentos.length && (
+                    <tr>
+                      <td colSpan={8} style={{ padding: 12, color: "#64748b" }}>
+                        No hay intentos aún. Aplica un test para generar registros.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // 3) Matriz (mock por ahora)
+    if (active === "matriz") {
+      return (
+        <div className="ged-work">
+          <div className="ged-work-title">Matriz cursos vs competencias</div>
+          <div className="ged-work-text">
+            Aquí vas a mapear cursos del COL ↔ competencias blandas, para recomendar capacitaciones según resultados.
+          </div>
+          <div className="ged-work-actions">
+            <button type="button" className="ged-chip" onClick={() => alert("Configurar matriz (mock)")}>
+              🧩 Configurar
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // 4) Comparativo (mock por ahora)
+    if (active === "comparativo") {
+      return (
+        <div className="ged-work">
+          <div className="ged-work-title">Seguimiento comparativo</div>
+          <div className="ged-work-text">
+            Aquí compararemos 4to vs 7mo semestre y tendencia por carrera.
+          </div>
+        </div>
+      );
+    }
+
+    // 5) Impacto (mock por ahora)
+    return (
+      <div className="ged-work">
+        <div className="ged-work-title">Indicadores de impacto</div>
+        <div className="ged-work-text">
+          Aquí verás KPIs institucionales: % en básico/funcional/avanzado, evolución, cobertura, etc.
+        </div>
+      </div>
+    );
+  }
 
   return (
-   <section className="ged2-wrap">
-      <header className="ged2-head">
-        {/* IZQUIERDA: volver + titulo */}
-        <div className="ged2-head-left">
-          <button
-            className="ged2-back-btn"
-            type="button"
-            onClick={() => navigate("/admin")}
-          >
-            ← Volver al Dashboard
-          </button>
-
-          <div>
-            <h1 className="ged2-title">Gestión de Evaluación Diagnóstica</h1>
-            <p className="ged2-subtitle">
-              Administra evaluaciones, reportes, matriz cursos vs competencias y seguimiento del impacto.
-            </p>
-          </div>
+    <div className="ged-wrap">
+      <div className="ged-topbar">
+        <div className="ged-topbar-left">
+          <h1 className="ged-title">Gestión de Evaluación Diagnóstica</h1>
+          <p className="ged-subtitle">
+            Administra evaluaciones, reportes, matriz cursos vs competencias y seguimiento del impacto.
+          </p>
         </div>
 
         <div className="ged-actions">
-          <button className="ged-btn-secondary" type="button">
+          <button type="button" className="ged-btn ged-btn-ghost" onClick={() => navigate("/admin")}>
+            ← Volver al Dashboard
+          </button>
+          <button type="button" className="ged-btn ged-btn-soft" onClick={() => alert("Exportar (mock)")}>
             ⬇️ Exportar
           </button>
-          <button className="ged-btn-primary" type="button">
-            ➕ Nueva evaluación
+          <button type="button" className="ged-btn ged-btn-primary" onClick={() => alert("Nueva evaluación (mock)")}>
+            ＋ Nueva evaluación
+          </button>
+          <button type="button" className="ged-btn ged-btn-primary-alt" onClick={() => navigate("/admin/evaluacion-diagnostica/test")}>
+            🧪 Aplicar Test
           </button>
         </div>
-      </header>
+      </div>
 
       <div className="ged-grid">
-        {/* Menú lateral interno */}
-        <aside className="ged-menu">
-          <div className="ged-menu-title">Módulos</div>
+        <aside className="ged-left">
+          <div className="ged-left-card">
+            <div className="ged-left-head">
+              <h3>Módulos</h3>
+              <span className="ged-left-pill">Mock</span>
+            </div>
 
-        <div className="ged-tabs">
-  {TABS.map((t) => (
-    <button
-      key={t.key}
-      type="button"
-      className={`ged-tab ${tab === t.key ? "active" : ""}`}
-      onClick={() => setTab(t.key)}
-    >
-      <span className="ged-tab-badge" aria-hidden="true">
-        {t.icon}
-      </span>
+            <div className="ged-mod-list">
+              {MODULOS.map((m) => {
+                const isActive = m.key === active;
+                return (
+                  <button
+                    key={m.key}
+                    type="button"
+                    className={`ged-mod ${isActive ? "active" : ""}`}
+                    onClick={() => setActive(m.key)}
+                  >
+                    <div className="ged-mod-ico">{m.icon}</div>
+                    <div className="ged-mod-body">
+                      <div className="ged-mod-title">{m.title}</div>
+                      <div className="ged-mod-desc">{m.desc}</div>
+                    </div>
+                    <div className="ged-mod-arrow">›</div>
+                  </button>
+                );
+              })}
+            </div>
 
-      <span className="ged-tab-body">
-        <span className="ged-tab-title">{t.label}</span>
-        <span className="ged-tab-meta">Configurar • Revisar • Exportar</span>
-      </span>
-
-      <span className="ged-tab-arrow" aria-hidden="true">›</span>
-    </button>
-  ))}
-</div>
-
-         
+            <div className="ged-tip">
+              <b>Tip</b>
+              <p>Ahora ya: “Reportes” muestra intentos reales desde la BD.</p>
+            </div>
+          </div>
         </aside>
 
-        {/* Contenido */}
-        <main className="ged-content">
-          <div className="ged-panel">
-            <div className="ged-panel-head">
-              <div className="ged-panel-kicker">{current?.icon} Módulo</div>
-              <h2 className="ged-panel-title">{current?.label}</h2>
-              <p className="ged-panel-desc">
-                {tab === "evaluaciones" &&
-                  "Crea, publica y cierra evaluaciones por carrera/semestre; controla ventanas de aplicación y estado."}
-                {tab === "reportes" &&
-                  "Genera reportes individuales (por estudiante) y reportes institucionales (por carrera, cohorte y periodo)."}
-                {tab === "matriz" &&
-                  "Configura la matriz de cursos vs competencias (habilidades blandas) para alinear diagnóstico con oferta COL."}
-                {tab === "comparativo" &&
-                  "Compara resultados 4to vs 7mo semestre; seguimiento de evolución por competencia y por carrera."}
-                {tab === "impacto" &&
-                  "Visualiza indicadores de impacto de acciones formativas (tasa de mejora, cobertura, brechas y tendencia)."}
-              </p>
+        <main className="ged-main">
+          <section className="ged-main-card">
+            <div className="ged-main-head">
+              <div className="ged-main-head-badge">🧩 Módulo</div>
+              <h2 className="ged-main-title">{activeModule.title}</h2>
+              <p className="ged-main-sub">{activeModule.desc}</p>
             </div>
 
-            {/* Cards rápidas */}
-            <div className="ged-cards">
-              <div className="ged-card">
-                <div className="ged-card-title">Estado</div>
-                <div className="ged-card-value">Activo (Simulado)</div>
-                <div className="ged-card-note">Listo para integrar API</div>
-              </div>
-
-              <div className="ged-card">
-                <div className="ged-card-title">Periodo</div>
-                <div className="ged-card-value">2026-I</div>
-                <div className="ged-card-note">Editable luego</div>
-              </div>
-
-              <div className="ged-card">
-                <div className="ged-card-title">Cobertura</div>
-                <div className="ged-card-value">—</div>
-                <div className="ged-card-note">Se calculará con BD</div>
-              </div>
-            </div>
-
-            {/* Placeholder contenido por módulo */}
-            <div className="ged-placeholder">
-              <div className="ged-placeholder-box">
-                <div className="ged-placeholder-title">Área de trabajo</div>
-                <div className="ged-placeholder-text">
-                  Aquí irá la funcionalidad del módulo: formularios, tablas, filtros, exportación y gráficos.
+            <div className="ged-kpis">
+              {kpis.map((k) => (
+                <div key={k.label} className="ged-kpi">
+                  <div className="ged-kpi-label">{k.label}</div>
+                  <div className="ged-kpi-value">{k.value}</div>
+                  <div className="ged-kpi-hint">{k.hint}</div>
                 </div>
-
-                <div className="ged-placeholder-actions">
-                  <button className="ged-chip" type="button">🔎 Filtros</button>
-                  <button className="ged-chip" type="button">🧾 Ver detalle</button>
-                  <button className="ged-chip" type="button">📤 Generar reporte</button>
-                </div>
-              </div>
+              ))}
             </div>
 
-            <footer className="ged-footer">
-              <span className="ged-footer-pill">1) Gestiona evaluaciones</span>
-              <span className="ged-footer-pill">2) Reportes</span>
-              <span className="ged-footer-pill">3) Matriz</span>
-              <span className="ged-footer-pill">4) Comparativo</span>
-              <span className="ged-footer-pill">5) Impacto</span>
-            </footer>
-          </div>
+            {/* ✅ AQUÍ se muestra lo que corresponde a cada módulo */}
+            {renderModuleBody()}
+
+            <div className="ged-steps">
+              <span className={`ged-step ${active === "evaluaciones" ? "on" : ""}`}>1) Evaluaciones</span>
+              <span className={`ged-step ${active === "reportes" ? "on" : ""}`}>2) Reportes</span>
+              <span className={`ged-step ${active === "matriz" ? "on" : ""}`}>3) Matriz</span>
+              <span className={`ged-step ${active === "comparativo" ? "on" : ""}`}>4) Comparativo</span>
+              <span className={`ged-step ${active === "impacto" ? "on" : ""}`}>5) Impacto</span>
+            </div>
+          </section>
         </main>
       </div>
-    </section>
+    </div>
   );
 }
