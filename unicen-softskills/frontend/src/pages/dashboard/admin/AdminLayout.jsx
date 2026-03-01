@@ -19,7 +19,7 @@ export default function AdminLayout() {
       <nav className={`sidebar ${isSidebarOpen ? "open" : ""}`}>
         <div className="sidebar-header">
           <div className="sidebar-logo-wrapper">
-            <img src="/logo-unicen.png" alt="UNICEN" className="sidebar-unicen-logo" />
+            <img src="/unicen.png" alt="UNICEN" className="sidebar-unicen-logo" />
           </div>
 
           <div className="sidebar-title-block">
