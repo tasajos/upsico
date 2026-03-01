@@ -982,7 +982,7 @@ useEffect(() => {
           <div className="ged-left-card">
             <div className="ged-left-head">
               <h3>Módulos</h3>
-              <span className="ged-left-pill">Mock</span>
+              <span className="ged-left-pill">Menu</span>
             </div>
 
             <div className="ged-mod-list">
