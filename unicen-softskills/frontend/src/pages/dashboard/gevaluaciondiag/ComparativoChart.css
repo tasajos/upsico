@@ -1,0 +1,36 @@
+.ged-chart-wrap {
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.ged-chart {
+  width: 100%;
+  height: 280px;
+  display: block;
+}
+
+.grid {
+  stroke: rgba(2, 6, 23, 0.08);
+  stroke-width: 1;
+}
+
+.yLab, .xLab {
+  font-size: 12px;
+  fill: rgba(2, 6, 23, 0.65);
+  font-weight: 700;
+}
+
+.line {
+  stroke-width: 2.5;
+  opacity: 0.95;
+}
+
+.line.s4, .pt.s4 { stroke: #1d4ed8; fill: #1d4ed8; }
+.line.s7, .pt.s7 { stroke: #06b6d4; fill: #06b6d4; }
+
+.ged-chart-empty {
+  padding: 12px;
+  color: #64748b;
+  font-weight: 800;
+}
