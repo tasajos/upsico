@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { pool } from "./db.js";
 import diagnosticoRoutes from "./routes/diagnostico.routes.js";
 import matrizRoutes from "./routes/matriz.routes.js";
+import usuariosRoutes from "./routes/usuarios.routes.js";
 
 dotenv.config();
 
@@ -13,6 +14,7 @@ app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());
 app.use("/api/diagnostico", diagnosticoRoutes);
 app.use("/api/matriz", matrizRoutes);
+app.use("/api/usuarios", usuariosRoutes);
 
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, message: "API UNICEN SoftSkills funcionando" });
