@@ -66,7 +66,107 @@ export default function GestionEvDiag() {
 
   //compa
   const [carList, setCarList] = useState([]);
+
 const [cmpCarrera, setCmpCarrera] = useState("");
+
+
+function ComparativoChart({ serie }) {
+  // Normaliza (orden por fecha)
+  const data = [...serie]
+    .map((d) => ({
+      fecha: String(d.fecha).slice(0, 10),
+      semestre: Number(d.semestre),
+      y: Number(d.avg_total ?? d.promedio ?? d.valor ?? 0),
+    }))
+    .filter((d) => d.fecha && d.semestre && !Number.isNaN(d.y))
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+  // separa por semestre
+  const s4 = data.filter((d) => d.semestre === 4);
+  const s7 = data.filter((d) => d.semestre === 7);
+
+  // dominio X (fechas únicas)
+  const labels = Array.from(new Set(data.map((d) => d.fecha)));
+
+  // dominio Y
+  const ys = data.map((d) => d.y);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+
+  // padding para que no quede pegado
+  const pad = (maxY - minY) === 0 ? 5 : (maxY - minY) * 0.12;
+  const y0 = minY - pad;
+  const y1 = maxY + pad;
+
+  // layout SVG
+  const W = 900;
+  const H = 280;
+  const M = { l: 46, r: 18, t: 18, b: 44 };
+
+  const innerW = W - M.l - M.r;
+  const innerH = H - M.t - M.b;
+
+  const xFor = (fecha) => {
+    const i = labels.indexOf(fecha);
+    if (labels.length <= 1) return M.l + innerW / 2;
+    return M.l + (i / (labels.length - 1)) * innerW;
+  };
+
+  const yFor = (val) => {
+    if (y1 - y0 === 0) return M.t + innerH / 2;
+    const t = (val - y0) / (y1 - y0);
+    return M.t + (1 - t) * innerH;
+  };
+
+  const toPoints = (arr) =>
+    arr.map((d) => `${xFor(d.fecha)},${yFor(d.y)}`).join(" ");
+
+  const ticks = 4;
+  const yTicks = Array.from({ length: ticks + 1 }).map((_, i) => y0 + (i / ticks) * (y1 - y0));
+
+  return (
+    <div className="ged-chart-wrap">
+      <svg className="ged-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Tendencia comparativa">
+        {/* grid Y */}
+        {yTicks.map((v, i) => {
+          const y = yFor(v);
+          return (
+            <g key={i}>
+              <line x1={M.l} y1={y} x2={W - M.r} y2={y} className="grid" />
+              <text x={M.l - 8} y={y + 4} textAnchor="end" className="yLab">
+                {Number(v).toFixed(0)}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* eje X labels (salteado si hay muchas) */}
+        {labels.map((f, i) => {
+          const step = labels.length > 10 ? 2 : 1;
+          if (i % step !== 0) return null;
+          const x = xFor(f);
+          return (
+            <text key={f} x={x} y={H - 18} textAnchor="middle" className="xLab">
+              {f.slice(5)}
+            </text>
+          );
+        })}
+
+        {/* líneas */}
+        {s4.length > 0 && <polyline points={toPoints(s4)} className="line s4" fill="none" />}
+        {s7.length > 0 && <polyline points={toPoints(s7)} className="line s7" fill="none" />}
+
+        {/* puntos */}
+        {s4.map((d, idx) => (
+          <circle key={`s4-${idx}`} cx={xFor(d.fecha)} cy={yFor(d.y)} r="3.5" className="pt s4" />
+        ))}
+        {s7.map((d, idx) => (
+          <circle key={`s7-${idx}`} cx={xFor(d.fecha)} cy={yFor(d.y)} r="3.5" className="pt s7" />
+        ))}
+      </svg>
+    </div>
+  );
+}
 const [cmpDesde, setCmpDesde] = useState("");
 const [cmpHasta, setCmpHasta] = useState("");
 
@@ -644,8 +744,27 @@ useEffect(() => {
           </div>
 
           {/* Tendencia (simple) */}
-          <div style={{ marginTop: 12, color: "#475569", fontWeight: 800 }}>
-            Tendencia: (ya tienes <code>serie</code> en el endpoint). Si quieres, lo graficamos luego con una mini gráfica.
+                    {/* Tendencia (gráfica SVG) */}
+          <div className="ged-chart-card" style={{ marginTop: 12 }}>
+            <div className="ged-chart-head">
+              <div>
+                <div className="ged-chart-title">Tendencia de puntaje promedio</div>
+                <div className="ged-chart-sub">Serie por fecha (semestre 4 vs 7)</div>
+              </div>
+
+              <div className="ged-chart-legend">
+                <span className="dot s4" /> <b>4to</b>
+                <span className="dot s7" /> <b>7mo</b>
+              </div>
+            </div>
+
+            {(!cmpData?.serie || !cmpData.serie.length) ? (
+              <div style={{ padding: 12, color: "#64748b", fontWeight: 800 }}>
+                No hay serie para graficar con los filtros actuales.
+              </div>
+            ) : (
+              <ComparativoChart serie={cmpData.serie} />
+            )}
           </div>
         </>
       )}
