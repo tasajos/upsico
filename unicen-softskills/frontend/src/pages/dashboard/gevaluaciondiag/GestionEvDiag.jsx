@@ -976,7 +976,7 @@ useEffect(() => {
 
             <div className="ged-tip">
               <b>Tip</b>
-              <p>“Desarrollado por Carlos Azcarraga.</p>
+              <p>“Desarrollado por Carlos Azcarraga."</p>
             </div>
           </div>
         </aside>
