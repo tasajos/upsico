@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "./GestionEvDiag.css";
 import MatrizCursosCompetencias from "./MatrizCursosCompetencias";
 
+
 const API = "http://localhost:5000/api";
 
 async function apiJson(url, options = {}) {
@@ -70,103 +71,17 @@ export default function GestionEvDiag() {
 const [cmpCarrera, setCmpCarrera] = useState("");
 
 
-function ComparativoChart({ serie }) {
-  // Normaliza (orden por fecha)
-  const data = [...serie]
-    .map((d) => ({
-      fecha: String(d.fecha).slice(0, 10),
-      semestre: Number(d.semestre),
-      y: Number(d.avg_total ?? d.promedio ?? d.valor ?? 0),
-    }))
-    .filter((d) => d.fecha && d.semestre && !Number.isNaN(d.y))
-    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+//impacto
+// impacto
+const [impCarrera, setImpCarrera] = useState("");
+const [impDesde, setImpDesde] = useState("");
+const [impHasta, setImpHasta] = useState("");
 
-  // separa por semestre
-  const s4 = data.filter((d) => d.semestre === 4);
-  const s7 = data.filter((d) => d.semestre === 7);
+const [impLoading, setImpLoading] = useState(false);
+const [impError, setImpError] = useState("");
+const [impData, setImpData] = useState(null);
 
-  // dominio X (fechas únicas)
-  const labels = Array.from(new Set(data.map((d) => d.fecha)));
 
-  // dominio Y
-  const ys = data.map((d) => d.y);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-
-  // padding para que no quede pegado
-  const pad = (maxY - minY) === 0 ? 5 : (maxY - minY) * 0.12;
-  const y0 = minY - pad;
-  const y1 = maxY + pad;
-
-  // layout SVG
-  const W = 900;
-  const H = 280;
-  const M = { l: 46, r: 18, t: 18, b: 44 };
-
-  const innerW = W - M.l - M.r;
-  const innerH = H - M.t - M.b;
-
-  const xFor = (fecha) => {
-    const i = labels.indexOf(fecha);
-    if (labels.length <= 1) return M.l + innerW / 2;
-    return M.l + (i / (labels.length - 1)) * innerW;
-  };
-
-  const yFor = (val) => {
-    if (y1 - y0 === 0) return M.t + innerH / 2;
-    const t = (val - y0) / (y1 - y0);
-    return M.t + (1 - t) * innerH;
-  };
-
-  const toPoints = (arr) =>
-    arr.map((d) => `${xFor(d.fecha)},${yFor(d.y)}`).join(" ");
-
-  const ticks = 4;
-  const yTicks = Array.from({ length: ticks + 1 }).map((_, i) => y0 + (i / ticks) * (y1 - y0));
-
-  return (
-    <div className="ged-chart-wrap">
-      <svg className="ged-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Tendencia comparativa">
-        {/* grid Y */}
-        {yTicks.map((v, i) => {
-          const y = yFor(v);
-          return (
-            <g key={i}>
-              <line x1={M.l} y1={y} x2={W - M.r} y2={y} className="grid" />
-              <text x={M.l - 8} y={y + 4} textAnchor="end" className="yLab">
-                {Number(v).toFixed(0)}
-              </text>
-            </g>
-          );
-        })}
-
-        {/* eje X labels (salteado si hay muchas) */}
-        {labels.map((f, i) => {
-          const step = labels.length > 10 ? 2 : 1;
-          if (i % step !== 0) return null;
-          const x = xFor(f);
-          return (
-            <text key={f} x={x} y={H - 18} textAnchor="middle" className="xLab">
-              {f.slice(5)}
-            </text>
-          );
-        })}
-
-        {/* líneas */}
-        {s4.length > 0 && <polyline points={toPoints(s4)} className="line s4" fill="none" />}
-        {s7.length > 0 && <polyline points={toPoints(s7)} className="line s7" fill="none" />}
-
-        {/* puntos */}
-        {s4.map((d, idx) => (
-          <circle key={`s4-${idx}`} cx={xFor(d.fecha)} cy={yFor(d.y)} r="3.5" className="pt s4" />
-        ))}
-        {s7.map((d, idx) => (
-          <circle key={`s7-${idx}`} cx={xFor(d.fecha)} cy={yFor(d.y)} r="3.5" className="pt s7" />
-        ))}
-      </svg>
-    </div>
-  );
-}
 const [cmpDesde, setCmpDesde] = useState("");
 const [cmpHasta, setCmpHasta] = useState("");
 
@@ -327,7 +242,8 @@ const [cmpData, setCmpData] = useState(null); // { bySemestre, serie }
   );
 
 
-  useEffect(() => {
+  // 1) Cargar carreras (cuando comparativo o impacto)
+useEffect(() => {
   let mounted = true;
 
   async function loadCarreras() {
@@ -340,16 +256,20 @@ const [cmpData, setCmpData] = useState(null); // { bySemestre, serie }
     }
   }
 
-  if (active === "comparativo") loadCarreras();
+  if (active === "comparativo" || active === "impacto") loadCarreras();
+
   return () => { mounted = false; };
 }, [active]);
 
+
+// 2) Cargar comparativo (solo comparativo)
 useEffect(() => {
   let mounted = true;
 
   async function loadComparativo() {
     try {
       if (active !== "comparativo") return;
+
       setCmpLoading(true);
       setCmpError("");
       setCmpData(null);
@@ -359,7 +279,9 @@ useEffect(() => {
       if (cmpDesde) qs.set("desde", cmpDesde);
       if (cmpHasta) qs.set("hasta", cmpHasta);
 
-      const data = await apiJson(`${API}/diagnostico/comparativo${qs.toString() ? `?${qs}` : ""}`);
+      const data = await apiJson(
+        `${API}/diagnostico/comparativo${qs.toString() ? `?${qs}` : ""}`
+      );
       if (!mounted) return;
       setCmpData(data);
     } catch (e) {
@@ -373,6 +295,39 @@ useEffect(() => {
   return () => { mounted = false; };
 }, [active, cmpCarrera, cmpDesde, cmpHasta]);
 
+
+// 3) Cargar impacto (solo impacto)
+useEffect(() => {
+  let mounted = true;
+
+  async function loadImpacto() {
+    try {
+      if (active !== "impacto") return;
+
+      setImpLoading(true);
+      setImpError("");
+      setImpData(null);
+
+      const qs = new URLSearchParams();
+      if (impCarrera) qs.set("carrera", impCarrera);
+      if (impDesde) qs.set("desde", impDesde);
+      if (impHasta) qs.set("hasta", impHasta);
+
+      const data = await apiJson(
+        `${API}/diagnostico/impacto${qs.toString() ? `?${qs}` : ""}`
+      );
+      if (!mounted) return;
+      setImpData(data);
+    } catch (e) {
+      if (mounted) setImpError(e.message || "Error cargando indicadores de impacto.");
+    } finally {
+      if (mounted) setImpLoading(false);
+    }
+  }
+
+  loadImpacto();
+  return () => { mounted = false; };
+}, [active, impCarrera, impDesde, impHasta]);
   // ✅ HOOK 1: cargar intentos SOLO si active === "reportes"
   useEffect(() => {
     let mounted = true;
@@ -472,315 +427,499 @@ useEffect(() => {
   };
 
   function renderModuleBody() {
-    if (active === "evaluaciones") {
-      return (
-        <div className="ged-work">
-          <div className="ged-work-title">Evaluaciones</div>
-          <div className="ged-work-text">
-            Aquí podrás crear/activar un test, versionarlo y definir ventana de aplicación por carrera/semestre.
-          </div>
-
-          <div className="ged-work-actions">
-            <button type="button" className="ged-chip" onClick={() => navigate("/admin/evaluacion-diagnostica/test")}>
-              🧪 Aplicar Test
-            </button>
-            <button type="button" className="ged-chip" onClick={() => alert("Nueva evaluación (mock)")}>
-              ＋ Nueva evaluación
-            </button>
-          </div>
+  if (active === "evaluaciones") {
+    return (
+      <div className="ged-work">
+        <div className="ged-work-title">Evaluaciones</div>
+        <div className="ged-work-text">
+          Aquí podrás crear/activar un test, versionarlo y definir ventana de aplicación por carrera/semestre.
         </div>
-      );
-    }
 
-    if (active === "reportes") {
-      return (
-        <div className="ged-work">
-          <div className="ged-work-title">Reportes</div>
-          <div className="ged-work-text">Listado de intentos enviados.</div>
-
-          {loadingIntentos && <div style={{ marginTop: 12 }}>Cargando intentos...</div>}
-          {errorIntentos && (
-            <div className="td-alert" role="alert" style={{ marginTop: 12 }}>
-              {errorIntentos}
-            </div>
-          )}
-
-          {!loadingIntentos && !errorIntentos && (
-            <div style={{ marginTop: 14, overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 10px" }}>
-                <thead>
-                  <tr style={{ textAlign: "left", color: "#1e3a8a" }}>
-                    <th>ID</th>
-                    <th>Estudiante</th>
-                    <th>Carrera</th>
-                    <th>Semestre</th>
-                    <th>Fecha</th>
-                    <th>Puntaje</th>
-                    <th>Nivel</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {intentos.map((it) => (
-                    <tr
-                      key={it.id}
-                      style={{
-                        background: "#fff",
-                        boxShadow: "0 10px 22px rgba(30,58,138,0.08)",
-                        borderRadius: 14,
-                      }}
-                    >
-                      <td style={{ padding: 12, borderRadius: "14px 0 0 14px" }}>{it.id}</td>
-                      <td style={{ padding: 12 }}>{it.estudiante_nombre}</td>
-                      <td style={{ padding: 12 }}>{it.carrera}</td>
-                      <td style={{ padding: 12 }}>{it.semestre}</td>
-                      <td style={{ padding: 12 }}>{String(it.fecha_aplicacion).slice(0, 10)}</td>
-                      <td style={{ padding: 12, fontWeight: 800, color: "#1e40af" }}>{it.total_puntaje}</td>
-                      <td style={{ padding: 12 }}>{it.nivel}</td>
-                      <td style={{ padding: 12, borderRadius: "0 14px 14px 0" }}>
-                        <button type="button" className="ged-chip" onClick={() => openDetalle(it.id)}>
-                          📄 Ver detalle
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {!intentos.length && (
-                    <tr>
-                      <td colSpan={8} style={{ padding: 12, color: "#64748b" }}>
-                        No hay intentos aún. Aplica un test para generar registros.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
+        <div className="ged-work-actions">
+          <button
+            type="button"
+            className="ged-chip"
+            onClick={() => navigate("/admin/evaluacion-diagnostica/test")}
+          >
+            🧪 Aplicar Test
+          </button>
+          <button type="button" className="ged-chip" onClick={() => alert("Nueva evaluación (mock)")}>
+            ＋ Nueva evaluación
+          </button>
         </div>
-      );
-    }
-
-    if (active === "matriz") {
-      return (
-        <div className="ged-work">
-          <div className="ged-work-title">Matriz cursos vs competencias</div>
-          <div className="ged-work-text">
-            Basada en el documento COL. Click en una celda para cambiar: <b>— → ◐ → ✔️</b>
-          </div>
-
-          <div className="ged-legend">
-            <span><b>✔️</b> Desarrollo directo</span>
-            <span><b>◐</b> Desarrollo parcial</span>
-            <span><b>—</b> No aborda explícito</span>
-          </div>
-
-          {matError && (
-            <div className="td-alert" role="alert" style={{ marginTop: 12 }}>
-              {matError}
-            </div>
-          )}
-
-          {matLoading ? (
-            <div style={{ marginTop: 12 }}>Cargando matriz...</div>
-          ) : (
-            <div className="ged-matrix-wrap" style={{ marginTop: 12 }}>
-              <table className="ged-matrix">
-                <thead>
-                  <tr>
-                    <th className="ged-matrix-sticky">Cursos COL / Habilidades</th>
-                    {competencias.map((c) => (
-                      <th key={c}>{c}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {matCursos.map((row, idx) => (
-                    <tr key={row.curso}>
-                      <td className="ged-matrix-sticky-row">
-                        <div className="ged-matrix-course">{row.curso}</div>
-                      </td>
-
-                      {competencias.map((comp) => {
-                        const v = row.cells?.[comp] || CELL.NO;
-                        return (
-                          <td key={comp}>
-                            <button
-                              type="button"
-                              className={`ged-matrix-cell ${v.toLowerCase?.() || ""}`}
-                              onClick={() => toggleCell(idx, comp)}
-                              title={`Click para cambiar (${cellLabel(v)})`}
-                            >
-                              {cellLabel(v)}
-                            </button>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <div className="ged-work-actions" style={{ marginTop: 12 }}>
-            <button type="button" className="ged-btn ged-btn-soft" onClick={() => alert("Luego: guardar en BD/API")}>
-              💾 Guardar cambios
-            </button>
-            <button type="button" className="ged-btn ged-btn-ghost" onClick={() => alert("Luego: exportar PDF/Excel")}>
-              ⬇️ Exportar matriz
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-  if (active === "comparativo") {
-  const rows = cmpData?.bySemestre || [];
-  const s4 = rows.find(r => String(r.semestre) === "4");
-  const s7 = rows.find(r => String(r.semestre) === "7");
-
-  return (
-    <div className="ged-work">
-      <div className="ged-work-title">Seguimiento comparativo (4to vs 7mo)</div>
-      <div className="ged-work-text">
-        Compara cantidad de intentos, puntaje promedio y distribución de niveles por semestre.
       </div>
+    );
+  }
 
-      {/* Filtros */}
-      <div className="ged-mat-toolbar" style={{ marginTop: 12 }}>
-        <div className="ged-mat-filters">
-          <label className="ged-mat-field">
-            <span>Carrera</span>
-            <select value={cmpCarrera} onChange={(e) => setCmpCarrera(e.target.value)}>
-              <option value="">Todas</option>
-              {carList.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </label>
+  if (active === "reportes") {
+    return (
+      <div className="ged-work">
+        <div className="ged-work-title">Reportes</div>
+        <div className="ged-work-text">Listado de intentos enviados.</div>
 
-          <label className="ged-mat-field">
-            <span>Desde</span>
-            <input type="date" value={cmpDesde} onChange={(e) => setCmpDesde(e.target.value)} />
-          </label>
-
-          <label className="ged-mat-field">
-            <span>Hasta</span>
-            <input type="date" value={cmpHasta} onChange={(e) => setCmpHasta(e.target.value)} />
-          </label>
-        </div>
-
-        <button
-          type="button"
-          className="ged-btn ged-btn-soft"
-          onClick={() => { setCmpCarrera(""); setCmpDesde(""); setCmpHasta(""); }}
-        >
-          Limpiar
-        </button>
-      </div>
-
-      {cmpError && (
-        <div className="td-alert" role="alert" style={{ marginTop: 12 }}>
-          {cmpError}
-        </div>
-      )}
-
-      {cmpLoading ? (
-        <div style={{ marginTop: 12 }}>Cargando comparativo...</div>
-      ) : (
-        <>
-          {/* KPIs comparativos */}
-          <div className="ged-det-kpis" style={{ marginTop: 12, gridTemplateColumns: "repeat(3, minmax(0,1fr))" }}>
-            <div className="ged-det-kpi">
-              <span>4to semestre</span>
-              <b>{s4 ? `n=${s4.n} · avg=${s4.avg_total}` : "—"}</b>
-            </div>
-            <div className="ged-det-kpi">
-              <span>7mo semestre</span>
-              <b>{s7 ? `n=${s7.n} · avg=${s7.avg_total}` : "—"}</b>
-            </div>
-            <div className="ged-det-kpi">
-              <span>Diferencia promedio</span>
-              <b>
-                {(s4 && s7) ? `${(Number(s7.avg_total) - Number(s4.avg_total)).toFixed(2)}` : "—"}
-              </b>
-            </div>
+        {loadingIntentos && <div style={{ marginTop: 12 }}>Cargando intentos...</div>}
+        {errorIntentos && (
+          <div className="td-alert" role="alert" style={{ marginTop: 12 }}>
+            {errorIntentos}
           </div>
+        )}
 
-          {/* Tabla resumen */}
-          <div className="ged-det-tablewrap" style={{ marginTop: 12 }}>
-            <table className="ged-det-table">
+        {!loadingIntentos && !errorIntentos && (
+          <div style={{ marginTop: 14, overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 10px" }}>
               <thead>
-                <tr>
+                <tr style={{ textAlign: "left", color: "#1e3a8a" }}>
+                  <th>ID</th>
+                  <th>Estudiante</th>
+                  <th>Carrera</th>
                   <th>Semestre</th>
-                  <th>Intentos</th>
-                  <th>Promedio</th>
-                  <th>Min</th>
-                  <th>Max</th>
-                  <th>Básico</th>
-                  <th>Funcional</th>
-                  <th>Avanzado</th>
+                  <th>Fecha</th>
+                  <th>Puntaje</th>
+                  <th>Nivel</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
-                  <tr key={r.semestre}>
-                    <td><b>{r.semestre}</b></td>
-                    <td>{r.n}</td>
-                    <td>{r.avg_total}</td>
-                    <td>{r.min_total}</td>
-                    <td>{r.max_total}</td>
-                    <td>{r.basico}</td>
-                    <td>{r.funcional}</td>
-                    <td>{r.avanzado}</td>
+                {intentos.map((it) => (
+                  <tr
+                    key={it.id}
+                    style={{
+                      background: "#fff",
+                      boxShadow: "0 10px 22px rgba(30,58,138,0.08)",
+                      borderRadius: 14,
+                    }}
+                  >
+                    <td style={{ padding: 12, borderRadius: "14px 0 0 14px" }}>{it.id}</td>
+                    <td style={{ padding: 12 }}>{it.estudiante_nombre}</td>
+                    <td style={{ padding: 12 }}>{it.carrera}</td>
+                    <td style={{ padding: 12 }}>{it.semestre}</td>
+                    <td style={{ padding: 12 }}>{String(it.fecha_aplicacion).slice(0, 10)}</td>
+                    <td style={{ padding: 12, fontWeight: 800, color: "#1e40af" }}>{it.total_puntaje}</td>
+                    <td style={{ padding: 12 }}>{it.nivel}</td>
+                    <td style={{ padding: 12, borderRadius: "0 14px 14px 0" }}>
+                      <button type="button" className="ged-chip" onClick={() => openDetalle(it.id)}>
+                        📄 Ver detalle
+                      </button>
+                    </td>
                   </tr>
                 ))}
-                {!rows.length && (
+                {!intentos.length && (
                   <tr>
-                    <td colSpan={8} style={{ padding: 12, color: "#64748b", fontWeight: 800 }}>
-                      No hay datos con los filtros seleccionados.
+                    <td colSpan={8} style={{ padding: 12, color: "#64748b" }}>
+                      No hay intentos aún. Aplica un test para generar registros.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+        )}
+      </div>
+    );
+  }
 
-          {/* Tendencia (simple) */}
-                    {/* Tendencia (gráfica SVG) */}
-          <div className="ged-chart-card" style={{ marginTop: 12 }}>
-            <div className="ged-chart-head">
-              <div>
-                <div className="ged-chart-title">Tendencia de puntaje promedio</div>
-                <div className="ged-chart-sub">Serie por fecha (semestre 4 vs 7)</div>
+  if (active === "matriz") {
+    return (
+      <div className="ged-work">
+        <div className="ged-work-title">Matriz cursos vs competencias</div>
+        <div className="ged-work-text">
+          Basada en el documento COL. Click en una celda para cambiar: <b>— → ◐ → ✔️</b>
+        </div>
+
+        <div className="ged-legend">
+          <span><b>✔️</b> Desarrollo directo</span>
+          <span><b>◐</b> Desarrollo parcial</span>
+          <span><b>—</b> No aborda explícito</span>
+        </div>
+
+        {matError && (
+          <div className="td-alert" role="alert" style={{ marginTop: 12 }}>
+            {matError}
+          </div>
+        )}
+
+        {matLoading ? (
+          <div style={{ marginTop: 12 }}>Cargando matriz...</div>
+        ) : (
+          <div className="ged-matrix-wrap" style={{ marginTop: 12 }}>
+            <table className="ged-matrix">
+              <thead>
+                <tr>
+                  <th className="ged-matrix-sticky">Cursos COL / Habilidades</th>
+                  {competencias.map((c) => (
+                    <th key={c}>{c}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {matCursos.map((row, idx) => (
+                  <tr key={row.curso}>
+                    <td className="ged-matrix-sticky-row">
+                      <div className="ged-matrix-course">{row.curso}</div>
+                    </td>
+
+                    {competencias.map((comp) => {
+                      const v = row.cells?.[comp] || CELL.NO;
+                      return (
+                        <td key={comp}>
+                          <button
+                            type="button"
+                            className={`ged-matrix-cell ${v.toLowerCase?.() || ""}`}
+                            onClick={() => toggleCell(idx, comp)}
+                            title={`Click para cambiar (${cellLabel(v)})`}
+                          >
+                            {cellLabel(v)}
+                          </button>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="ged-work-actions" style={{ marginTop: 12 }}>
+          <button type="button" className="ged-btn ged-btn-soft" onClick={() => alert("Luego: guardar en BD/API")}>
+            💾 Guardar cambios
+          </button>
+          <button type="button" className="ged-btn ged-btn-ghost" onClick={() => alert("Luego: exportar PDF/Excel")}>
+            ⬇️ Exportar matriz
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (active === "comparativo") {
+    const rows = cmpData?.bySemestre || [];
+    const s4 = rows.find((r) => String(r.semestre) === "4");
+    const s7 = rows.find((r) => String(r.semestre) === "7");
+
+    return (
+      <div className="ged-work">
+        <div className="ged-work-title">Seguimiento comparativo (4to vs 7mo)</div>
+        <div className="ged-work-text">
+          Compara cantidad de intentos, puntaje promedio y distribución de niveles por semestre.
+        </div>
+
+        <div className="ged-mat-toolbar" style={{ marginTop: 12 }}>
+          <div className="ged-mat-filters">
+            <label className="ged-mat-field">
+              <span>Carrera</span>
+              <select value={cmpCarrera} onChange={(e) => setCmpCarrera(e.target.value)}>
+                <option value="">Todas</option>
+                {carList.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="ged-mat-field">
+              <span>Desde</span>
+              <input type="date" value={cmpDesde} onChange={(e) => setCmpDesde(e.target.value)} />
+            </label>
+
+            <label className="ged-mat-field">
+              <span>Hasta</span>
+              <input type="date" value={cmpHasta} onChange={(e) => setCmpHasta(e.target.value)} />
+            </label>
+          </div>
+
+          <button
+            type="button"
+            className="ged-btn ged-btn-soft"
+            onClick={() => {
+              setCmpCarrera("");
+              setCmpDesde("");
+              setCmpHasta("");
+            }}
+          >
+            Limpiar
+          </button>
+        </div>
+
+        {cmpError && (
+          <div className="td-alert" role="alert" style={{ marginTop: 12 }}>
+            {cmpError}
+          </div>
+        )}
+
+        {cmpLoading ? (
+          <div style={{ marginTop: 12 }}>Cargando comparativo...</div>
+        ) : (
+          <>
+            <div className="ged-det-kpis" style={{ marginTop: 12, gridTemplateColumns: "repeat(3, minmax(0,1fr))" }}>
+              <div className="ged-det-kpi">
+                <span>4to semestre</span>
+                <b>{s4 ? `n=${s4.n} · avg=${s4.avg_total}` : "—"}</b>
               </div>
-
-              <div className="ged-chart-legend">
-                <span className="dot s4" /> <b>4to</b>
-                <span className="dot s7" /> <b>7mo</b>
+              <div className="ged-det-kpi">
+                <span>7mo semestre</span>
+                <b>{s7 ? `n=${s7.n} · avg=${s7.avg_total}` : "—"}</b>
+              </div>
+              <div className="ged-det-kpi">
+                <span>Diferencia promedio</span>
+                <b>{(s4 && s7) ? `${(Number(s7.avg_total) - Number(s4.avg_total)).toFixed(2)}` : "—"}</b>
               </div>
             </div>
 
-            {(!cmpData?.serie || !cmpData.serie.length) ? (
-              <div style={{ padding: 12, color: "#64748b", fontWeight: 800 }}>
-                No hay serie para graficar con los filtros actuales.
-              </div>
-            ) : (
-              <ComparativoChart serie={cmpData.serie} />
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
+            <div className="ged-det-tablewrap" style={{ marginTop: 12 }}>
+              <table className="ged-det-table">
+                <thead>
+                  <tr>
+                    <th>Semestre</th>
+                    <th>Intentos</th>
+                    <th>Promedio</th>
+                    <th>Min</th>
+                    <th>Max</th>
+                    <th>Básico</th>
+                    <th>Funcional</th>
+                    <th>Avanzado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.semestre}>
+                      <td><b>{r.semestre}</b></td>
+                      <td>{r.n}</td>
+                      <td>{r.avg_total}</td>
+                      <td>{r.min_total}</td>
+                      <td>{r.max_total}</td>
+                      <td>{r.basico}</td>
+                      <td>{r.funcional}</td>
+                      <td>{r.avanzado}</td>
+                    </tr>
+                  ))}
+                  {!rows.length && (
+                    <tr>
+                      <td colSpan={8} style={{ padding: 12, color: "#64748b", fontWeight: 800 }}>
+                        No hay datos con los filtros seleccionados.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ✅ IMPACTO AQUÍ (no dentro de return)
+  if (active === "impacto") {
+    const k = impData?.kpis || null;
+
+    const n = Number(k?.n_intentos || 0);
+    const basico = Number(k?.basico || 0);
+    const funcional = Number(k?.funcional || 0);
+    const avanzado = Number(k?.avanzado || 0);
+
+    const pct = (x) => (n ? `${Math.round((Number(x || 0) * 100) / n)}%` : "—");
+
+    const byCarrera = impData?.byCarrera || [];
+    const bySemestre = impData?.bySemestre || [];
+    const trend = impData?.trend || [];
 
     return (
       <div className="ged-work">
         <div className="ged-work-title">Indicadores de impacto</div>
         <div className="ged-work-text">
-          Aquí verás KPIs institucionales: % en básico/funcional/avanzado, evolución, cobertura, etc.
+          KPIs institucionales: distribución por nivel, promedios y tendencia.
         </div>
+
+        <div className="ged-mat-toolbar" style={{ marginTop: 12 }}>
+          <div className="ged-mat-filters">
+            <label className="ged-mat-field">
+              <span>Carrera</span>
+              <select value={impCarrera} onChange={(e) => setImpCarrera(e.target.value)}>
+                <option value="">Todas</option>
+                {carList.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="ged-mat-field">
+              <span>Desde</span>
+              <input type="date" value={impDesde} onChange={(e) => setImpDesde(e.target.value)} />
+            </label>
+
+            <label className="ged-mat-field">
+              <span>Hasta</span>
+              <input type="date" value={impHasta} onChange={(e) => setImpHasta(e.target.value)} />
+            </label>
+          </div>
+
+          <button
+            type="button"
+            className="ged-btn ged-btn-soft"
+            onClick={() => { setImpCarrera(""); setImpDesde(""); setImpHasta(""); }}
+          >
+            Limpiar
+          </button>
+        </div>
+
+        {impError && (
+          <div className="td-alert" role="alert" style={{ marginTop: 12 }}>
+            {impError}
+          </div>
+        )}
+
+        {impLoading ? (
+          <div style={{ marginTop: 12 }}>Cargando indicadores...</div>
+        ) : (
+          <>
+            <div className="ged-det-kpis" style={{ marginTop: 12, gridTemplateColumns: "repeat(4, minmax(0,1fr))" }}>
+              <div className="ged-det-kpi">
+                <span>Intentos</span>
+                <b>{k ? n : "—"}</b>
+              </div>
+              <div className="ged-det-kpi">
+                <span>Promedio</span>
+                <b style={{ color: "#1e40af" }}>{k ? k.avg_total : "—"}</b>
+              </div>
+              <div className="ged-det-kpi">
+                <span>Mínimo</span>
+                <b>{k ? k.min_total : "—"}</b>
+              </div>
+              <div className="ged-det-kpi">
+                <span>Máximo</span>
+                <b>{k ? k.max_total : "—"}</b>
+              </div>
+            </div>
+
+            <div className="ged-det-kpis" style={{ marginTop: 12, gridTemplateColumns: "repeat(3, minmax(0,1fr))" }}>
+              <div className="ged-det-kpi">
+                <span>Básico</span>
+                <b>{basico} <span style={{ fontWeight: 700, color: "#64748b" }}>({pct(basico)})</span></b>
+              </div>
+              <div className="ged-det-kpi">
+                <span>Funcional</span>
+                <b>{funcional} <span style={{ fontWeight: 700, color: "#64748b" }}>({pct(funcional)})</span></b>
+              </div>
+              <div className="ged-det-kpi">
+                <span>Avanzado</span>
+                <b>{avanzado} <span style={{ fontWeight: 700, color: "#64748b" }}>({pct(avanzado)})</span></b>
+              </div>
+            </div>
+
+            <div className="ged-det-tablewrap" style={{ marginTop: 12 }}>
+              <div style={{ fontWeight: 900, color: "#1e3a8a", marginBottom: 8 }}>Impacto por carrera</div>
+              <table className="ged-det-table">
+                <thead>
+                  <tr>
+                    <th>Carrera</th>
+                    <th>Intentos</th>
+                    <th>Promedio</th>
+                    <th>Básico</th>
+                    <th>Funcional</th>
+                    <th>Avanzado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {byCarrera.map((r) => (
+                    <tr key={r.carrera}>
+                      <td><b>{r.carrera}</b></td>
+                      <td>{r.n}</td>
+                      <td>{r.avg_total}</td>
+                      <td>{r.basico}</td>
+                      <td>{r.funcional}</td>
+                      <td>{r.avanzado}</td>
+                    </tr>
+                  ))}
+                  {!byCarrera.length && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 12, color: "#64748b", fontWeight: 800 }}>
+                        No hay datos con los filtros seleccionados.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="ged-det-tablewrap" style={{ marginTop: 12 }}>
+              <div style={{ fontWeight: 900, color: "#1e3a8a", marginBottom: 8 }}>Impacto por semestre</div>
+              <table className="ged-det-table">
+                <thead>
+                  <tr>
+                    <th>Semestre</th>
+                    <th>Intentos</th>
+                    <th>Promedio</th>
+                    <th>Básico</th>
+                    <th>Funcional</th>
+                    <th>Avanzado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bySemestre.map((r) => (
+                    <tr key={r.semestre}>
+                      <td><b>{r.semestre}</b></td>
+                      <td>{r.n}</td>
+                      <td>{r.avg_total}</td>
+                      <td>{r.basico}</td>
+                      <td>{r.funcional}</td>
+                      <td>{r.avanzado}</td>
+                    </tr>
+                  ))}
+                  {!bySemestre.length && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 12, color: "#64748b", fontWeight: 800 }}>
+                        No hay datos con los filtros seleccionados.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="ged-det-tablewrap" style={{ marginTop: 12 }}>
+              <div style={{ fontWeight: 900, color: "#1e3a8a", marginBottom: 8 }}>Tendencia mensual (promedio)</div>
+
+              {!trend.length ? (
+                <div style={{ padding: 12, color: "#64748b", fontWeight: 800 }}>
+                  No hay tendencia para los filtros actuales.
+                </div>
+              ) : (
+                <table className="ged-det-table">
+                  <thead>
+                    <tr>
+                      <th>Mes</th>
+                      <th>Intentos</th>
+                      <th>Promedio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {trend.map((t) => (
+                      <tr key={t.ym}>
+                        <td><b>{t.ym}</b></td>
+                        <td>{t.n}</td>
+                        <td>{t.avg_total}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </>
+        )}
       </div>
     );
   }
+
+  // fallback
+  return (
+    <div className="ged-work">
+      <div className="ged-work-title">Indicadores de impacto</div>
+      <div className="ged-work-text">
+        Aquí verás KPIs institucionales: % en básico/funcional/avanzado, evolución, cobertura, etc.
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className="ged-wrap">
@@ -837,7 +976,7 @@ useEffect(() => {
 
             <div className="ged-tip">
               <b>Tip</b>
-              <p>“Reportes” ya muestra intentos reales. “Matriz” está basada en el documento.</p>
+              <p>“Desarrollado por Carlos Azcarraga.</p>
             </div>
           </div>
         </aside>

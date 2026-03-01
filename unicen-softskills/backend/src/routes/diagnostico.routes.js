@@ -306,4 +306,120 @@ router.get("/comparativo", async (req, res) => {
   }
 });
 
+router.get("/impacto", async (req, res) => {
+  try {
+    const { carrera = "", desde = "", hasta = "" } = req.query;
+
+    const where = [];
+    const params = [];
+
+    if (carrera) {
+      where.push("carrera = ?");
+      params.push(carrera);
+    }
+    if (desde) {
+      where.push("DATE(fecha_aplicacion) >= DATE(?)");
+      params.push(desde);
+    }
+    if (hasta) {
+      where.push("DATE(fecha_aplicacion) <= DATE(?)");
+      params.push(hasta);
+    }
+
+    const WHERE_SQL = where.length ? `WHERE ${where.join(" AND ")}` : "";
+
+    // ✅ TABLA CORRECTA: diagnostico_intento
+    // ✅ NIVELES CORRECTOS: BASICO/FUNCIONAL/AVANZADO
+
+    // 1) KPIs globales
+    const [kpiRows] = await pool.query(
+      `
+      SELECT 
+        COUNT(*) AS n_intentos,
+        ROUND(AVG(total_puntaje), 2) AS avg_total,
+        MIN(total_puntaje) AS min_total,
+        MAX(total_puntaje) AS max_total,
+        SUM(nivel = 'BASICO') AS basico,
+        SUM(nivel = 'FUNCIONAL') AS funcional,
+        SUM(nivel = 'AVANZADO') AS avanzado
+      FROM diagnostico_intento
+      ${WHERE_SQL}
+      `,
+      params
+    );
+
+    const kpis = kpiRows?.[0] || {
+      n_intentos: 0,
+      avg_total: null,
+      min_total: null,
+      max_total: null,
+      basico: 0,
+      funcional: 0,
+      avanzado: 0,
+    };
+
+    // 2) Por carrera
+    const [byCarrera] = await pool.query(
+      `
+      SELECT 
+        carrera,
+        COUNT(*) AS n,
+        ROUND(AVG(total_puntaje), 2) AS avg_total,
+        SUM(nivel = 'BASICO') AS basico,
+        SUM(nivel = 'FUNCIONAL') AS funcional,
+        SUM(nivel = 'AVANZADO') AS avanzado
+      FROM diagnostico_intento
+      ${WHERE_SQL}
+      GROUP BY carrera
+      ORDER BY n DESC, carrera ASC
+      `,
+      params
+    );
+
+    // 3) Por semestre
+    const [bySemestre] = await pool.query(
+      `
+      SELECT 
+        semestre,
+        COUNT(*) AS n,
+        ROUND(AVG(total_puntaje), 2) AS avg_total,
+        SUM(nivel = 'BASICO') AS basico,
+        SUM(nivel = 'FUNCIONAL') AS funcional,
+        SUM(nivel = 'AVANZADO') AS avanzado
+      FROM diagnostico_intento
+      ${WHERE_SQL}
+      GROUP BY semestre
+      ORDER BY CAST(semestre AS UNSIGNED) ASC
+      `,
+      params
+    );
+
+    // 4) Tendencia mensual (opcional)
+    const [trend] = await pool.query(
+      `
+      SELECT 
+        DATE_FORMAT(fecha_aplicacion, '%Y-%m') AS ym,
+        COUNT(*) AS n,
+        ROUND(AVG(total_puntaje), 2) AS avg_total
+      FROM diagnostico_intento
+      ${WHERE_SQL}
+      GROUP BY ym
+      ORDER BY ym ASC
+      `,
+      params
+    );
+
+    return res.json({
+      ok: true,
+      filters: { carrera, desde, hasta },
+      kpis,
+      byCarrera,
+      bySemestre,
+      trend,
+    });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 export default router;
