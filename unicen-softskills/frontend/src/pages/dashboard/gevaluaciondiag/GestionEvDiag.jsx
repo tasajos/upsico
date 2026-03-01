@@ -71,7 +71,37 @@ export default function GestionEvDiag() {
 const [cmpCarrera, setCmpCarrera] = useState("");
 
 
-//impacto
+//cargar test
+
+const [pickTestOpen, setPickTestOpen] = useState(false);
+const [tests, setTests] = useState([]);
+const [testsLoading, setTestsLoading] = useState(false);
+const [testsError, setTestsError] = useState("");
+
+useEffect(() => {
+  let mounted = true;
+
+  async function loadTests() {
+    try {
+      setTestsLoading(true);
+      setTestsError("");
+      const data = await apiJson(`${API}/diagnostico/tests`);
+      if (!mounted) return;
+      setTests(data.rows || []);
+    } catch (e) {
+      if (mounted) setTestsError(e.message || "Error cargando tests.");
+    } finally {
+      if (mounted) setTestsLoading(false);
+    }
+  }
+
+  // los cargamos una vez (o cuando abras el modal si prefieres)
+  loadTests();
+
+  return () => { mounted = false; };
+}, []);
+
+
 // impacto
 const [impCarrera, setImpCarrera] = useState("");
 const [impDesde, setImpDesde] = useState("");
@@ -439,7 +469,9 @@ useEffect(() => {
           <button
             type="button"
             className="ged-chip"
-            onClick={() => navigate("/admin/evaluacion-diagnostica/test")}
+           // onClick={() => navigate("/admin/evaluacion-diagnostica/test")}
+           onClick={() => setPickTestOpen(true)}
+
           >
             🧪 Aplicar Test
           </button>
@@ -939,7 +971,7 @@ useEffect(() => {
           <button type="button" className="ged-btn ged-btn-primary" onClick={() => alert("Nueva evaluación (mock)")}>
             ＋ Nueva evaluación
           </button>
-          <button type="button" className="ged-btn ged-btn-primary-alt" onClick={() => navigate("/admin/evaluacion-diagnostica/test")}>
+          <button type="button" className="ged-btn ged-btn-primary-alt" onClick={() => setPickTestOpen(true)}>
             🧪 Aplicar Test
           </button>
         </div>
@@ -1103,6 +1135,57 @@ useEffect(() => {
           </div>
         </div>
       )}
+{/* MODAL SELECTOR (igual al tuyo) */}
+      {pickTestOpen && (
+  <div className="ged-modal-overlay" onClick={() => setPickTestOpen(false)} role="dialog" aria-modal="true">
+    <div className="ged-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="ged-modal-head">
+        <div>
+          <h3 className="ged-modal-title">Elegir evaluación</h3>
+          <p className="ged-modal-sub">Selecciona qué test aplicar.</p>
+        </div>
+        <button type="button" className="ged-modal-close" onClick={() => setPickTestOpen(false)}>✕</button>
+      </div>
+
+      <div className="ged-modal-body">
+        {testsLoading && <div>Cargando evaluaciones...</div>}
+        {!testsLoading && testsError && <div className="td-alert" role="alert">{testsError}</div>}
+
+        {!testsLoading && !testsError && (
+          <div style={{ display: "grid", gap: 10 }}>
+            {(tests || []).map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className="ged-btn ged-btn-soft"
+                onClick={() => {
+                  setPickTestOpen(false);
+                  navigate(`/admin/evaluacion-diagnostica/test?testId=${t.id}`);
+                }}
+                style={{ justifyContent: "space-between", display: "flex" }}
+              >
+                <span style={{ fontWeight: 900 }}>{t.nombre}</span>
+                <span style={{ color: "#64748b", fontWeight: 800 }}>v{t.version}{t.activo ? " · Activo" : ""}</span>
+              </button>
+            ))}
+
+            {!tests?.length && (
+              <div style={{ color: "#64748b", fontWeight: 800 }}>
+                No hay evaluaciones registradas aún.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="ged-modal-actions">
+        <button type="button" className="ged-btn ged-btn-ghost" onClick={() => setPickTestOpen(false)}>
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

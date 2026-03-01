@@ -56,16 +56,14 @@ router.get("/test-activo", async (req, res) => {
  * }
  */
 router.post("/enviar", async (req, res) => {
-  const { estudiante_nombre, carrera, semestre, fecha_aplicacion, respuestas } = req.body;
+  const { test_id, estudiante_nombre, carrera, semestre, fecha_aplicacion, respuestas } = req.body;
 
-  if (!estudiante_nombre || !carrera || !semestre || !fecha_aplicacion) {
-    return res.status(400).json({ ok: false, message: "Faltan datos del estudiante." });
+  if (!test_id || !estudiante_nombre || !carrera || !semestre || !fecha_aplicacion) {
+    return res.status(400).json({ ok: false, message: "Faltan datos (incluye test_id)." });
   }
 
-  if (!Array.isArray(respuestas) || respuestas.length !== 21) {
-    return res
-      .status(400)
-      .json({ ok: false, message: "Debes enviar exactamente 21 respuestas." });
+  if (!Array.isArray(respuestas) || !respuestas.length) {
+    return res.status(400).json({ ok: false, message: "Debes enviar respuestas." });
   }
 
   // Validar valores 1..4
@@ -80,27 +78,41 @@ router.post("/enviar", async (req, res) => {
   }
 
   try {
-    // 1) obtener test activo
-    const [testRows] = await pool.query(
-      `SELECT id
-       FROM diagnostico_test
-       WHERE activo = 1
-       ORDER BY id DESC
-       LIMIT 1`
+    // 1) Cargar preguntas del test (para validar cantidad y recodificar invertidas)
+    const [pregRows] = await pool.query(
+      `SELECT id, invertido
+       FROM diagnostico_pregunta
+       WHERE test_id = ? AND activo = 1`,
+      [test_id]
     );
-    if (!testRows.length) {
-      return res.status(404).json({ ok: false, message: "No hay test activo." });
-    }
-    const test_id = testRows[0].id;
 
-    // 2) Calcular puntaje y nivel (rangos del documento)
-    const total = respuestas.reduce((acc, r) => acc + Number(r.valor), 0);
+    if (!pregRows.length) {
+      return res.status(404).json({ ok: false, message: "El test no tiene preguntas activas." });
+    }
+
+    // Validar cantidad exacta
+    if (respuestas.length !== pregRows.length) {
+      return res.status(400).json({
+        ok: false,
+        message: `Debes enviar exactamente ${pregRows.length} respuestas para este test.`,
+      });
+    }
+
+    const invMap = new Map(pregRows.map(p => [p.id, Number(p.invertido) === 1]));
+
+    // 2) Calcular total aplicando inversión donde corresponde: nuevo = 5 - valor :contentReference[oaicite:2]{index=2}
+    const total = respuestas.reduce((acc, r) => {
+      const v = Number(r.valor);
+      const inv = invMap.get(Number(r.pregunta_id)) === true;
+      const real = inv ? (5 - v) : v;
+      return acc + real;
+    }, 0);
+
     let nivel = "FUNCIONAL";
     if (total >= 21 && total <= 42) nivel = "BASICO";
     else if (total >= 43 && total <= 63) nivel = "FUNCIONAL";
     else if (total >= 64 && total <= 84) nivel = "AVANZADO";
 
-    // 3) Transaction
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -122,7 +134,6 @@ router.post("/enviar", async (req, res) => {
       );
 
       await conn.commit();
-
       return res.json({ ok: true, intento_id, total, nivel });
     } catch (e) {
       await conn.rollback();
@@ -416,6 +427,63 @@ router.get("/impacto", async (req, res) => {
       byCarrera,
       bySemestre,
       trend,
+    });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// GET /api/diagnostico/tests
+router.get("/tests", async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT id, nombre, version, activo
+      FROM diagnostico_test
+      ORDER BY id DESC
+    `);
+    return res.json({ ok: true, rows });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// GET /api/diagnostico/tests/:id
+router.get("/tests/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [testRows] = await pool.query(
+      `SELECT id, nombre, version, activo
+       FROM diagnostico_test
+       WHERE id = ?
+       LIMIT 1`,
+      [id]
+    );
+
+    if (!testRows.length) {
+      return res.status(404).json({ ok: false, message: "Test no encontrado." });
+    }
+
+    const test = testRows[0];
+
+    const [preguntas] = await pool.query(
+      `SELECT id, numero, enunciado, competencia, invertido
+       FROM diagnostico_pregunta
+       WHERE test_id = ? AND activo = 1
+       ORDER BY numero ASC`,
+      [test.id]
+    );
+
+    return res.json({
+      ok: true,
+      test,
+      preguntas,
+      escala: [
+        { valor: 1, label: "Rara vez actúo así" },
+        { valor: 2, label: "Algunas veces actúo así" },
+        { valor: 3, label: "Generalmente actúo así" },
+        { valor: 4, label: "Casi siempre actúo así" },
+      ],
     });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e.message });

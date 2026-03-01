@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import "./TestDiagnostico.css";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const API = "http://localhost:5000/api";
+
+function useQuery() {
+  const { search } = useLocation();
+  return useMemo(() => new URLSearchParams(search), [search]);
+}
 
 export default function TestDiagnostico() {
   const [loading, setLoading] = useState(true);
@@ -10,6 +15,8 @@ export default function TestDiagnostico() {
   const [preguntas, setPreguntas] = useState([]);
   const [escala, setEscala] = useState([]);
   const navigate = useNavigate();
+  const q = useQuery();
+  const testId = q.get("testId"); // viene desde modal: /test?testId=2
 
   // Datos estudiante
   const [estudianteNombre, setEstudianteNombre] = useState("");
@@ -28,17 +35,32 @@ export default function TestDiagnostico() {
   const [result, setResult] = useState(null); // { total, nivel, intento_id }
   const [error, setError] = useState("");
 
+  // ✅ carga test por id (si viene) o test-activo (fallback)
   useEffect(() => {
     let mounted = true;
 
     async function load() {
       try {
         setLoading(true);
-        const res = await fetch(`${API}/diagnostico/test-activo`);
-        const data = await res.json();
-        if (!res.ok || !data.ok) throw new Error(data?.message || "No se pudo cargar el test.");
+        setError("");
+        setResult(null);
+
+        // al cambiar de test, resetea respuestas
+        setAnswers({});
+
+        const url = testId
+          ? `${API}/diagnostico/tests/${encodeURIComponent(testId)}`
+          : `${API}/diagnostico/test-activo`;
+
+        const res = await fetch(url);
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok || !data.ok) {
+          throw new Error(data?.message || "No se pudo cargar el test.");
+        }
 
         if (!mounted) return;
+
         setTest(data.test);
         setPreguntas(data.preguntas || []);
         setEscala(data.escala || []);
@@ -53,7 +75,7 @@ export default function TestDiagnostico() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [testId]);
 
   const answeredCount = useMemo(() => Object.keys(answers).length, [answers]);
   const totalQuestions = preguntas.length;
@@ -68,7 +90,15 @@ export default function TestDiagnostico() {
       totalQuestions > 0 &&
       answeredCount === totalQuestions
     );
-  }, [sending, estudianteNombre, carrera, semestre, fechaAplicacion, answeredCount, totalQuestions]);
+  }, [
+    sending,
+    estudianteNombre,
+    carrera,
+    semestre,
+    fechaAplicacion,
+    answeredCount,
+    totalQuestions,
+  ]);
 
   const onPick = (preguntaId, valor) => {
     setAnswers((prev) => ({ ...prev, [preguntaId]: valor }));
@@ -79,7 +109,7 @@ export default function TestDiagnostico() {
     setError("");
     setResult(null);
 
-    if (!estudianteNombre || !carrera) {
+    if (!estudianteNombre.trim() || !carrera.trim()) {
       setError("Completa Nombre y Carrera.");
       return;
     }
@@ -93,6 +123,8 @@ export default function TestDiagnostico() {
       setSending(true);
 
       const payload = {
+        // ✅ NUEVO: test_id (si no hay testId, usamos el id del test cargado)
+        test_id: Number(testId || test?.id),
         estudiante_nombre: estudianteNombre,
         carrera,
         semestre,
@@ -103,13 +135,17 @@ export default function TestDiagnostico() {
         })),
       };
 
+      if (!payload.test_id) {
+        throw new Error("No se pudo determinar el test_id. Vuelve a cargar la página.");
+      }
+
       const res = await fetch(`${API}/diagnostico/enviar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) throw new Error(data?.message || "No se pudo enviar el test.");
 
       setResult({ intento_id: data.intento_id, total: data.total, nivel: data.nivel });
@@ -134,6 +170,14 @@ export default function TestDiagnostico() {
         <div className="td-card">
           <h2>Error</h2>
           <p>{error}</p>
+          <button
+            className="td-back"
+            type="button"
+            onClick={() => navigate("/admin/evaluacion-diagnostica")}
+            style={{ marginTop: 12 }}
+          >
+            ← Volver
+          </button>
         </div>
       </div>
     );
@@ -146,11 +190,13 @@ export default function TestDiagnostico() {
           <h1 className="td-title">Test Diagnóstico</h1>
           <p className="td-subtitle">
             {test?.nombre} · {test?.version}
+            {testId ? <span style={{ marginLeft: 8, color: "#64748b" }}>· ID {testId}</span> : null}
           </p>
         </div>
+
         <button className="td-back" type="button" onClick={() => navigate("/admin/evaluacion-diagnostica")}>
-  ← Volver
-</button>
+          ← Volver
+        </button>
 
         <div className="td-progress">
           <div className="td-progress-top">
@@ -162,7 +208,9 @@ export default function TestDiagnostico() {
           <div className="td-bar">
             <div
               className="td-bar-fill"
-              style={{ width: `${totalQuestions ? (answeredCount / totalQuestions) * 100 : 0}%` }}
+              style={{
+                width: `${totalQuestions ? (answeredCount / totalQuestions) * 100 : 0}%`,
+              }}
             />
           </div>
         </div>
@@ -212,7 +260,7 @@ export default function TestDiagnostico() {
             <div className="td-result">
               <div className="td-result-top">
                 <strong>Resultado</strong>
-                <span className={`td-pill ${result.nivel.toLowerCase()}`}>{result.nivel}</span>
+                <span className={`td-pill ${String(result.nivel || "").toLowerCase()}`}>{result.nivel}</span>
               </div>
               <div className="td-result-score">
                 <span>Puntaje total</span>
@@ -243,16 +291,14 @@ export default function TestDiagnostico() {
           <div className="td-questions">
             {preguntas.map((p) => (
               <article key={p.id} className={`td-q ${answers[p.id] ? "done" : ""}`}>
-               <div className="td-q-head">
-  <span className="td-q-num">#{p.numero}</span>
+                <div className="td-q-head">
+                  <span className="td-q-num">#{p.numero}</span>
 
-  <div className="td-q-title">
-    <div className="td-competencia">
-      {p.competencia || "Sin competencia"}
-    </div>
-    <p className="td-q-text">{p.enunciado}</p>
-  </div>
-</div>
+                  <div className="td-q-title">
+                    <div className="td-competencia">{p.competencia || "Sin competencia"}</div>
+                    <p className="td-q-text">{p.enunciado}</p>
+                  </div>
+                </div>
 
                 <div className="td-q-options">
                   {[1, 2, 3, 4].map((v) => (
