@@ -520,4 +520,54 @@ router.get("/tests/:id", async (req, res) => {
     return res.status(500).json({ ok: false, error: e.message });
   }
 });
+
+// PATCH /api/diagnostico/tests/:id/activar
+router.patch("/tests/:id/activar", async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const { id } = req.params;
+
+    await conn.beginTransaction();
+
+    // Desactivar todos los tests
+    await conn.query(`
+      UPDATE diagnostico_test
+      SET activo = 0
+    `);
+
+    // Activar solo el seleccionado
+    const [result] = await conn.query(
+      `
+      UPDATE diagnostico_test
+      SET activo = 1
+      WHERE id = ?
+      `,
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      await conn.rollback();
+      return res.status(404).json({
+        ok: false,
+        message: "Test no encontrado."
+      });
+    }
+
+    await conn.commit();
+
+    return res.json({
+      ok: true,
+      message: "Evaluación habilitada para estudiantes."
+    });
+  } catch (error) {
+    await conn.rollback();
+    console.error(error);
+    return res.status(500).json({
+      ok: false,
+      message: "No se pudo habilitar la evaluación."
+    });
+  } finally {
+    conn.release();
+  }
+});
 export default router;

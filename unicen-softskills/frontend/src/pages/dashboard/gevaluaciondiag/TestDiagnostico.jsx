@@ -16,7 +16,19 @@ export default function TestDiagnostico() {
   const [escala, setEscala] = useState([]);
   const navigate = useNavigate();
   const q = useQuery();
-  const testId = q.get("testId"); // viene desde modal: /test?testId=2
+  const testId = q.get("testId");
+
+  const authUser = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("authUser")) || null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const isStudent = authUser?.rol === "Estudiante";
+
+  const backPath = isStudent ? "/estudiante" : "/admin/evaluacion-diagnostica";
 
   // Datos estudiante
   const [estudianteNombre, setEstudianteNombre] = useState("");
@@ -27,15 +39,16 @@ export default function TestDiagnostico() {
     return d.toISOString().slice(0, 10);
   });
 
-  // Respuestas: { [pregunta_id]: valor }
+  // Respuestas
   const [answers, setAnswers] = useState({});
   const [sending, setSending] = useState(false);
 
   // Resultado
-  const [result, setResult] = useState(null); // { total, nivel, intento_id }
+  const [result, setResult] = useState(null);
   const [error, setError] = useState("");
 
-  // ✅ carga test por id (si viene) o test-activo (fallback)
+  const [showModal, setShowModal] = useState(false);
+
   useEffect(() => {
     let mounted = true;
 
@@ -44,8 +57,6 @@ export default function TestDiagnostico() {
         setLoading(true);
         setError("");
         setResult(null);
-
-        // al cambiar de test, resetea respuestas
         setAnswers({});
 
         const url = testId
@@ -71,11 +82,17 @@ export default function TestDiagnostico() {
       }
     }
 
+    // Si es estudiante, autocompletar nombre desde sesión
+    if (isStudent && authUser) {
+      const nombre = `${authUser.nombres || ""} ${authUser.apellidos || ""}`.trim();
+      setEstudianteNombre(nombre);
+    }
+
     load();
     return () => {
       mounted = false;
     };
-  }, [testId]);
+  }, [testId, isStudent, authUser]);
 
   const answeredCount = useMemo(() => Object.keys(answers).length, [answers]);
   const totalQuestions = preguntas.length;
@@ -123,7 +140,6 @@ export default function TestDiagnostico() {
       setSending(true);
 
       const payload = {
-        // ✅ NUEVO: test_id (si no hay testId, usamos el id del test cargado)
         test_id: Number(testId || test?.id),
         estudiante_nombre: estudianteNombre,
         carrera,
@@ -146,9 +162,23 @@ export default function TestDiagnostico() {
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) throw new Error(data?.message || "No se pudo enviar el test.");
+      if (!res.ok || !data.ok) {
+        throw new Error(data?.message || "No se pudo enviar el test.");
+      }
 
-      setResult({ intento_id: data.intento_id, total: data.total, nivel: data.nivel });
+      setResult({
+        intento_id: data.intento_id,
+        total: data.total,
+        nivel: data.nivel,
+      });
+      setShowModal(true);
+
+      // Si es estudiante, volver al dashboard después de enviar
+      if (isStudent) {
+        setTimeout(() => {
+          navigate("/estudiante");
+        }, 1200);
+      }
     } catch (e) {
       setError(e.message || "Error enviando test.");
     } finally {
@@ -173,7 +203,7 @@ export default function TestDiagnostico() {
           <button
             className="td-back"
             type="button"
-            onClick={() => navigate("/admin/evaluacion-diagnostica")}
+            onClick={() => navigate(backPath)}
             style={{ marginTop: 12 }}
           >
             ← Volver
@@ -189,12 +219,22 @@ export default function TestDiagnostico() {
         <div>
           <h1 className="td-title">Test Diagnóstico</h1>
           <p className="td-subtitle">
-            {test?.nombre} · {test?.version}
-            {testId ? <span style={{ marginLeft: 8, color: "#64748b" }}>· ID {testId}</span> : null}
+            {isStudent
+              ? "Evaluación diagnóstica habilitada para el estudiante."
+              : (
+                <>
+                  {test?.nombre} · {test?.version}
+                  {testId ? (
+                    <span style={{ marginLeft: 8, color: "#64748b" }}>
+                      · ID {testId}
+                    </span>
+                  ) : null}
+                </>
+              )}
           </p>
         </div>
 
-        <button className="td-back" type="button" onClick={() => navigate("/admin/evaluacion-diagnostica")}>
+        <button className="td-back" type="button" onClick={() => navigate(backPath)}>
           ← Volver
         </button>
 
@@ -217,13 +257,16 @@ export default function TestDiagnostico() {
       </div>
 
       <form className="td-grid" onSubmit={handleSubmit}>
-        {/* Columna izquierda: datos */}
         <section className="td-panel">
           <h3 className="td-panel-title">Datos del estudiante</h3>
 
           <label className="td-field">
             <span>Nombre completo</span>
-            <input value={estudianteNombre} onChange={(e) => setEstudianteNombre(e.target.value)} />
+            <input
+              value={estudianteNombre}
+              onChange={(e) => setEstudianteNombre(e.target.value)}
+              readOnly={isStudent}
+            />
           </label>
 
           <label className="td-field">
@@ -242,7 +285,11 @@ export default function TestDiagnostico() {
 
             <label className="td-field">
               <span>Fecha</span>
-              <input type="date" value={fechaAplicacion} onChange={(e) => setFechaAplicacion(e.target.value)} />
+              <input
+                type="date"
+                value={fechaAplicacion}
+                onChange={(e) => setFechaAplicacion(e.target.value)}
+              />
             </label>
           </div>
 
@@ -256,11 +303,13 @@ export default function TestDiagnostico() {
             {sending ? "Enviando..." : "Enviar evaluación"}
           </button>
 
-          {result && (
+          {!isStudent && result && (
             <div className="td-result">
               <div className="td-result-top">
                 <strong>Resultado</strong>
-                <span className={`td-pill ${String(result.nivel || "").toLowerCase()}`}>{result.nivel}</span>
+                <span className={`td-pill ${String(result.nivel || "").toLowerCase()}`}>
+                  {result.nivel}
+                </span>
               </div>
               <div className="td-result-score">
                 <span>Puntaje total</span>
@@ -271,7 +320,6 @@ export default function TestDiagnostico() {
           )}
         </section>
 
-        {/* Columna derecha: preguntas */}
         <section className="td-panel td-panel-wide">
           <h3 className="td-panel-title">Preguntas</h3>
 
@@ -295,14 +343,21 @@ export default function TestDiagnostico() {
                   <span className="td-q-num">#{p.numero}</span>
 
                   <div className="td-q-title">
-                    <div className="td-competencia">{p.competencia || "Sin competencia"}</div>
+                    {!isStudent && (
+                      <div className="td-competencia">
+                        {p.competencia || "Sin competencia"}
+                      </div>
+                    )}
                     <p className="td-q-text">{p.enunciado}</p>
                   </div>
                 </div>
 
                 <div className="td-q-options">
                   {[1, 2, 3, 4].map((v) => (
-                    <label key={v} className={`td-opt ${Number(answers[p.id]) === v ? "active" : ""}`}>
+                    <label
+                      key={v}
+                      className={`td-opt ${Number(answers[p.id]) === v ? "active" : ""}`}
+                    >
                       <input
                         type="radio"
                         name={`p_${p.id}`}
@@ -319,6 +374,21 @@ export default function TestDiagnostico() {
           </div>
         </section>
       </form>
+      {showModal && (
+  <div className="td-modal-overlay">
+    <div className="td-modal">
+      <h2>✅ Evaluación terminada</h2>
+      <p>Tu evaluación fue enviada correctamente.</p>
+
+      <button
+        className="td-modal-btn"
+        onClick={() => navigate("/estudiante")}
+      >
+        Volver al panel
+      </button>
+    </div>
+  </div>
+)}
     </div>
   );
 }
