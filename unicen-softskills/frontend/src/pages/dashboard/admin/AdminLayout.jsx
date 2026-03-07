@@ -1,9 +1,18 @@
-import { useEffect, useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import "./AdminDashboard.css";
 
 export default function AdminLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const authUser = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("authUser")) || null;
+    } catch {
+      return null;
+    }
+  }, []);
 
   useEffect(() => {
     const onResize = () => {
@@ -13,18 +22,46 @@ export default function AdminLayout() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem("authUser");
+    navigate("/", { replace: true });
+  };
+
+  const nombreCompleto = authUser
+    ? `${authUser.nombres || ""} ${authUser.apellidos || ""}`.trim()
+    : "Administrador";
+
   return (
     <div className="admin-shell">
-      {/* Sidebar */}
       <nav className={`sidebar ${isSidebarOpen ? "open" : ""}`}>
         <div className="sidebar-header">
           <div className="sidebar-logo-wrapper">
-            <img src="/unicen.png" alt="UNICEN" className="sidebar-unicen-logo" />
+            <img
+              src="/unicen.png"
+              alt="UNICEN"
+              className="sidebar-unicen-logo"
+            />
           </div>
 
           <div className="sidebar-title-block">
             <div className="sidebar-logo">EPSICO Admin</div>
-            <span className="role-badge">Administrador</span>
+            <span className="role-badge">{authUser?.rol || "Administrador"}</span>
+          </div>
+        </div>
+
+        <div
+          style={{
+            padding: "0 18px 14px 18px",
+            color: "#24406f",
+            fontWeight: 800,
+            fontSize: "13px",
+            lineHeight: 1.35,
+          }}
+        >
+          <div style={{ opacity: 0.75, fontSize: "12px" }}>Sesión activa</div>
+          <div>{nombreCompleto}</div>
+          <div style={{ opacity: 0.7, fontWeight: 700 }}>
+            {authUser?.email || ""}
           </div>
         </div>
 
@@ -61,14 +98,28 @@ export default function AdminLayout() {
             <span className="nav-icon">📄</span>Perfil Profesional y CV
           </NavLink>
         </div>
+
+        <div style={{ marginTop: "auto", padding: "16px 14px 14px 14px" }}>
+          <button
+            onClick={handleLogout}
+            className="nav-link"
+            style={{
+              width: "100%",
+              background: "transparent",
+              border: "none",
+              textAlign: "left",
+              cursor: "pointer",
+            }}
+          >
+            <span className="nav-icon">🚪</span>Salir
+          </button>
+        </div>
       </nav>
 
-      {/* Main */}
       <main className="main-content">
         <Outlet />
       </main>
 
-      {/* Mobile toggle */}
       <button
         className="menu-toggle"
         aria-label="Abrir menú"
@@ -77,8 +128,9 @@ export default function AdminLayout() {
         ☰
       </button>
 
-      {/* Overlay móvil */}
-      {isSidebarOpen && <div className="overlay" onClick={() => setIsSidebarOpen(false)} />}
+      {isSidebarOpen && (
+        <div className="overlay" onClick={() => setIsSidebarOpen(false)} />
+      )}
     </div>
   );
 }

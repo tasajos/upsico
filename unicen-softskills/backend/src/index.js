@@ -5,6 +5,7 @@ import { pool } from "./db.js";
 import diagnosticoRoutes from "./routes/diagnostico.routes.js";
 import matrizRoutes from "./routes/matriz.routes.js";
 import usuariosRoutes from "./routes/usuarios.routes.js";
+import authRoutes from "./routes/auth.routes.js";
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use(express.json());
 app.use("/api/diagnostico", diagnosticoRoutes);
 app.use("/api/matriz", matrizRoutes);
 app.use("/api/usuarios", usuariosRoutes);
+app.use("/api/auth", authRoutes);
 
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, message: "API UNICEN SoftSkills funcionando" });

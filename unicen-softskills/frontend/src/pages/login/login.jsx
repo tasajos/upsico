@@ -1,17 +1,17 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import "../login/login.css";
 
 export default function Login() {
+  const API_BASE = import.meta?.env?.VITE_API_BASE || "http://localhost:5000/api";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [status, setStatus] = useState("idle"); // idle | success | error
+  const [status, setStatus] = useState("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const navigate = useNavigate();
-
 
   const canSubmit = useMemo(() => {
     return email.trim().length > 0 && password.trim().length > 0 && !isSubmitting;
@@ -24,27 +24,40 @@ export default function Login() {
 
     if (!email || !password) {
       setStatus("error");
-      setErrorMsg("⚠️ Complete todos los campos académicos.");
+      setErrorMsg("⚠️ Complete todos los campos.");
       return;
     }
 
     try {
       setIsSubmitting(true);
 
-      // ✅ SIMULACIÓN (hasta que creemos /api/auth/login en el backend)
-      // Luego reemplazamos por:
-      // const res = await fetch("http://localhost:5000/api/auth/login", {...})
-      await new Promise((r) => setTimeout(r, 900));
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.message || "No se pudo iniciar sesión.");
+      }
+
+      localStorage.setItem("authUser", JSON.stringify(data.user));
 
       setStatus("success");
 
-      // Simulación de redirección
-          setTimeout(() => {
+      setTimeout(() => {
         navigate("/admin");
-      }, 300);
+      }, 250);
     } catch (err) {
       setStatus("error");
-      setErrorMsg("❌ Ocurrió un error al iniciar sesión. Intente nuevamente.");
+      setErrorMsg(err.message || "❌ Ocurrió un error al iniciar sesión.");
     } finally {
       setIsSubmitting(false);
     }
@@ -63,10 +76,10 @@ export default function Login() {
         <div className="university-badge">Plataforma Académica</div>
 
         <div className="unicen-logo-wrapper">
-  <img src="/unicen.png" alt="UNICEN" className="unicen-logo" />
-</div>
+          <img src="/unicen.png" alt="UNICEN" className="unicen-logo" />
+        </div>
 
-<div className="logo">SUAT</div>
+        <div className="logo">SUAT</div>
 
         <div className="subtitle">
           Sistema Universitario de Apoyo a la Toma de Decisiones
@@ -74,9 +87,7 @@ export default function Login() {
 
         <form onSubmit={handleSubmit}>
           <div className="input-group">
-            <span className="input-icon" aria-hidden="true">
-              📧
-            </span>
+            <span className="input-icon" aria-hidden="true">📧</span>
             <input
               type="email"
               placeholder="usuario@universidad.edu"
@@ -88,9 +99,7 @@ export default function Login() {
           </div>
 
           <div className="input-group">
-            <span className="input-icon" aria-hidden="true">
-              🔒
-            </span>
+            <span className="input-icon" aria-hidden="true">🔒</span>
             <input
               type="password"
               placeholder="Contraseña segura"
