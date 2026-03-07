@@ -462,7 +462,7 @@ useEffect(() => {
       <div className="ged-work">
         <div className="ged-work-title">Evaluaciones</div>
         <div className="ged-work-text">
-          Aquí podrás crear/activar un test, versionarlo y definir ventana de aplicación por carrera/semestre.
+           crear/activar un test
         </div>
 
         <div className="ged-work-actions">
@@ -1153,21 +1153,62 @@ useEffect(() => {
 
         {!testsLoading && !testsError && (
           <div style={{ display: "grid", gap: 10 }}>
-            {(tests || []).map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                className="ged-btn ged-btn-soft"
-                onClick={() => {
-                  setPickTestOpen(false);
-                  navigate(`/admin/evaluacion-diagnostica/test?testId=${t.id}`);
-                }}
-                style={{ justifyContent: "space-between", display: "flex" }}
-              >
-                <span style={{ fontWeight: 900 }}>{t.nombre}</span>
-                <span style={{ color: "#64748b", fontWeight: 800 }}>v{t.version}{t.activo ? " · Activo" : ""}</span>
-              </button>
-            ))}
+           {(tests || []).map((t) => (
+  <div
+    key={t.id}
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 12,
+      padding: 12,
+      border: "1px solid #e5e7eb",
+      borderRadius: 12,
+      background: t.activo ? "#eff6ff" : "#fff",
+    }}
+  >
+    <div>
+      <div style={{ fontWeight: 900 }}>{t.nombre}</div>
+      <div style={{ color: "#64748b", fontWeight: 800 }}>
+        v{t.version} {t.activo ? "· Habilitado para estudiantes" : ""}
+      </div>
+    </div>
+
+    <div style={{ display: "flex", gap: 8 }}>
+      <button
+        type="button"
+        className="ged-btn ged-btn-soft"
+        onClick={() => {
+          setPickTestOpen(false);
+          navigate(`/admin/evaluacion-diagnostica/test?testId=${t.id}`);
+        }}
+      >
+        Abrir
+      </button>
+
+      <button
+        type="button"
+        className="ged-btn ged-btn-primary"
+        disabled={!!t.activo}
+        onClick={async () => {
+          try {
+            await apiJson(`${API}/diagnostico/tests/${t.id}/activar`, {
+              method: "PATCH",
+            });
+
+            const data = await apiJson(`${API}/diagnostico/tests`);
+            setTests(data.rows || []);
+            alert("Evaluación habilitada para estudiantes.");
+          } catch (e) {
+            alert(e.message || "No se pudo habilitar la evaluación.");
+          }
+        }}
+      >
+        {t.activo ? "Habilitada" : "Habilitar"}
+      </button>
+    </div>
+  </div>
+))}
 
             {!tests?.length && (
               <div style={{ color: "#64748b", fontWeight: 800 }}>

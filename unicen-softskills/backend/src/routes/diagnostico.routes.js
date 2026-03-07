@@ -434,6 +434,7 @@ router.get("/impacto", async (req, res) => {
 });
 
 // GET /api/diagnostico/tests
+// GET /api/diagnostico/tests
 router.get("/tests", async (req, res) => {
   try {
     const [rows] = await pool.query(`
@@ -444,6 +445,36 @@ router.get("/tests", async (req, res) => {
     return res.json({ ok: true, rows });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// GET /api/diagnostico/tests/activo
+router.get("/tests/activo", async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT id, nombre, version, activo
+      FROM diagnostico_test
+      WHERE activo = 1
+      LIMIT 1
+    `);
+
+    if (!rows.length) {
+      return res.status(404).json({
+        ok: false,
+        message: "No hay evaluación habilitada actualmente."
+      });
+    }
+
+    return res.json({
+      ok: true,
+      test: rows[0]
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      ok: false,
+      message: "Error al obtener evaluación activa."
+    });
   }
 });
 
@@ -489,5 +520,4 @@ router.get("/tests/:id", async (req, res) => {
     return res.status(500).json({ ok: false, error: e.message });
   }
 });
-
 export default router;
