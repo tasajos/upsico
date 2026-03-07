@@ -598,7 +598,28 @@ router.patch("/tests/:id/activar", async (req, res) => {
 // GET /api/diagnostico/competencias-debiles
 router.get("/competencias-debiles", async (req, res) => {
   try {
-    const [rows] = await pool.query(`
+    const { carrera, desde, hasta } = req.query;
+
+    const where = [];
+    const params = [];
+
+    if (carrera) {
+      where.push("i.carrera = ?");
+      params.push(carrera);
+    }
+    if (desde) {
+      where.push("DATE(i.fecha_aplicacion) >= DATE(?)");
+      params.push(desde);
+    }
+    if (hasta) {
+      where.push("DATE(i.fecha_aplicacion) <= DATE(?)");
+      params.push(hasta);
+    }
+
+    const whereSql = where.length ? `AND ${where.join(" AND ")}` : "";
+
+    const [rows] = await pool.query(
+      `
       SELECT
         p.competencia,
         ROUND(AVG(
@@ -609,12 +630,16 @@ router.get("/competencias-debiles", async (req, res) => {
         ), 2) AS promedio
       FROM diagnostico_respuesta r
       JOIN diagnostico_pregunta p ON p.id = r.pregunta_id
+      JOIN diagnostico_intento i ON i.id = r.intento_id
       WHERE p.competencia IS NOT NULL
         AND p.competencia <> ''
+        ${whereSql}
       GROUP BY p.competencia
       ORDER BY promedio ASC
       LIMIT 3
-    `);
+      `,
+      params
+    );
 
     return res.json({ ok: true, rows });
   } catch (e) {

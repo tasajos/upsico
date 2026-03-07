@@ -569,3 +569,242 @@
     grid-template-columns: 1fr;
   }
 }
+.kpi-grid-strong {
+  margin-bottom: 28px;
+}
+
+.dashboard-analytics-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 22px;
+  margin-bottom: 24px;
+}
+
+.analytics-card {
+  background: white;
+  border-radius: 20px;
+  padding: 22px;
+  box-shadow: 0 12px 28px rgba(30,58,138,0.08);
+  border: 1px solid rgba(59,130,246,0.08);
+}
+
+.analytics-card-large {
+  min-height: 380px;
+}
+
+.analytics-head h2 {
+  margin: 0 0 8px 0;
+  color: #1e3a8a;
+  font-size: 1.3rem;
+  font-weight: 900;
+}
+
+.analytics-head p {
+  margin: 0 0 18px 0;
+  color: #64748b;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.pie-card-wrap-big {
+  grid-template-columns: 220px 1fr;
+  gap: 24px;
+  margin-top: 8px;
+}
+
+.pie-chart-real-big {
+  width: 200px;
+  height: 200px;
+  border: 14px solid #eef3fb;
+  box-shadow: inset 0 0 0 20px #ffffff;
+}
+
+.pie-legend-big .pie-legend-item {
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #f8fbff;
+  border-radius: 12px;
+}
+
+.big-bars-chart {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.big-bars-plot {
+  height: 260px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-evenly;
+  gap: 30px;
+  background: #eef3fb;
+  border-radius: 18px;
+  padding: 24px;
+}
+
+.big-bar-group {
+  width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+
+.big-bar {
+  width: 58px;
+  border-radius: 16px 16px 0 0;
+  background: linear-gradient(180deg, #3b82f6 0%, #1e40af 100%);
+  min-height: 10px;
+}
+
+.big-bar.light {
+  background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%);
+}
+
+.big-bar-value {
+  margin-top: 12px;
+  color: #1e3a8a;
+  font-weight: 900;
+  font-size: 1rem;
+}
+
+.big-bar-label {
+  margin-top: 4px;
+  color: #64748b;
+  font-weight: 800;
+}
+
+.big-bars-foot {
+  margin-top: 16px;
+  color: #334155;
+  font-weight: 800;
+}
+
+.dashboard-bottom-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 22px;
+  margin-bottom: 24px;
+}
+
+.career-horizontal-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.career-row {
+  display: grid;
+  grid-template-columns: 180px 1fr 64px;
+  gap: 12px;
+  align-items: center;
+}
+
+.career-row-label {
+  color: #334155;
+  font-weight: 800;
+  font-size: 0.94rem;
+}
+
+.career-row-track {
+  height: 14px;
+  border-radius: 999px;
+  background: #e8f0fb;
+  overflow: hidden;
+}
+
+.career-row-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #60a5fa 0%, #1e40af 100%);
+}
+
+.career-row-value {
+  color: #1e3a8a;
+  font-weight: 900;
+  text-align: right;
+}
+
+.table-card {
+  margin-top: 0;
+}
+
+.dashboard-table-wrap {
+  overflow-x: auto;
+}
+
+.dashboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 880px;
+}
+
+.dashboard-table thead th {
+  text-align: left;
+  padding: 14px 12px;
+  font-size: 0.92rem;
+  color: #1e3a8a;
+  border-bottom: 2px solid #e5edf9;
+}
+
+.dashboard-table tbody td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #eef3fb;
+  color: #334155;
+  font-weight: 600;
+}
+
+.dashboard-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.status-pill.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-pill.warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-pill.danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+@media (max-width: 1200px) {
+  .dashboard-analytics-grid,
+  .dashboard-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pie-card-wrap-big {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .career-row {
+    grid-template-columns: 1fr;
+  }
+
+  .big-bars-plot {
+    height: auto;
+    min-height: 240px;
+  }
+}

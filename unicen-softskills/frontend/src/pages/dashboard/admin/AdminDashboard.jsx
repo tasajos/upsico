@@ -8,9 +8,23 @@ function clampPercent(v) {
   return Math.max(0, Math.min(100, n));
 }
 
-function shortLabel(text = "", max = 12) {
+function shortLabel(text = "", max = 18) {
   if (!text) return "N/A";
   return text.length > max ? `${text.slice(0, max)}…` : text;
+}
+
+function semaforoClase(avg) {
+  const n = Number(avg || 0);
+  if (n < 43) return "danger";
+  if (n < 64) return "warning";
+  return "success";
+}
+
+function semaforoTexto(avg) {
+  const n = Number(avg || 0);
+  if (n < 43) return "Básico";
+  if (n < 64) return "Funcional";
+  return "Avanzado";
 }
 
 export default function AdminDashboard() {
@@ -34,20 +48,20 @@ export default function AdminDashboard() {
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
-  const buildQuery = () => {
+  const buildQuery = (customFilters = filters) => {
     const params = new URLSearchParams();
-    if (filters.carrera) params.append("carrera", filters.carrera);
-    if (filters.desde) params.append("desde", filters.desde);
-    if (filters.hasta) params.append("hasta", filters.hasta);
+    if (customFilters.carrera) params.append("carrera", customFilters.carrera);
+    if (customFilters.desde) params.append("desde", customFilters.desde);
+    if (customFilters.hasta) params.append("hasta", customFilters.hasta);
     return params.toString();
   };
 
-  const loadDashboard = async () => {
+  const loadDashboard = async (customFilters = filters) => {
     try {
       setLoading(true);
       setError("");
 
-      const qs = buildQuery();
+      const qs = buildQuery(customFilters);
       const suffix = qs ? `?${qs}` : "";
 
       const [rResumen, rComparativo, rImpacto, rDebiles, rCarreras] =
@@ -88,6 +102,12 @@ export default function AdminDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const clearFilters = async () => {
+    const reset = { carrera: "", desde: "", hasta: "" };
+    setFilters(reset);
+    await loadDashboard(reset);
+  };
+
   const porcentajeBasico = useMemo(() => {
     if (!resumen || !Number(resumen.total)) return 0;
     return Math.round((Number(resumen.basico || 0) / Number(resumen.total)) * 100);
@@ -119,12 +139,10 @@ export default function AdminDashboard() {
     return (b - a).toFixed(2);
   }, [comparativa4to, comparativa7mo]);
 
-  const topCarreras = useMemo(() => impacto.slice(0, 5), [impacto]);
-
   const maxCarreraAvg = useMemo(() => {
-    if (!topCarreras.length) return 1;
-    return Math.max(...topCarreras.map((x) => Number(x.avg_total || 0)), 1);
-  }, [topCarreras]);
+    if (!impacto.length) return 1;
+    return Math.max(...impacto.map((x) => Number(x.avg_total || 0)), 1);
+  }, [impacto]);
 
   const pieBackground = useMemo(() => {
     const b = porcentajeBasico;
@@ -152,11 +170,11 @@ export default function AdminDashboard() {
         <div>
           <h1 className="dashboard-title">Dashboard Institucional</h1>
           <p className="dashboard-subtitle">
-            Indicadores reales de evaluaciones diagnósticas por carrera, semestre y nivel.
+            Visualización real de evaluaciones diagnósticas por carrera, semestre y nivel.
           </p>
         </div>
 
-        <button className="dashboard-refresh-btn" onClick={loadDashboard}>
+        <button className="dashboard-refresh-btn" onClick={() => loadDashboard()}>
           Actualizar
         </button>
       </div>
@@ -185,24 +203,16 @@ export default function AdminDashboard() {
         </div>
 
         <div className="dashboard-filter-actions">
-          <button className="dashboard-apply-btn" onClick={loadDashboard}>
+          <button className="dashboard-apply-btn" onClick={() => loadDashboard()}>
             Aplicar filtros
           </button>
-          <button
-            className="dashboard-clear-btn"
-            onClick={() => {
-              setFilters({ carrera: "", desde: "", hasta: "" });
-              setTimeout(() => {
-                window.location.reload();
-              }, 50);
-            }}
-          >
+          <button className="dashboard-clear-btn" onClick={clearFilters}>
             Limpiar
           </button>
         </div>
       </section>
 
-      <section className="kpi-grid">
+      <section className="kpi-grid kpi-grid-strong">
         <div className="kpi-card">
           <span className="kpi-label">Total intentos</span>
           <strong className="kpi-value">{Number(resumen?.total || 0)}</strong>
@@ -214,154 +224,187 @@ export default function AdminDashboard() {
         </div>
 
         <div className="kpi-card">
-          <span className="kpi-label">Nivel básico</span>
+          <span className="kpi-label">% Nivel básico</span>
           <strong className="kpi-value">{porcentajeBasico}%</strong>
         </div>
 
         <div className="kpi-card">
-          <span className="kpi-label">Nivel avanzado</span>
-          <strong className="kpi-value">{porcentajeAvanzado}%</strong>
+          <span className="kpi-label">Diferencia 7mo vs 4to</span>
+          <strong className="kpi-value">{diferenciaSemestres} pts</strong>
         </div>
       </section>
 
-      <section className="indicators-grid">
-        <div className="indicator-card">
-          <h2 className="card-title">% Estudiantes en Nivel Básico</h2>
-          <div className="card-value">{porcentajeBasico}%</div>
-          <p className="card-description">
-            Porcentaje real de estudiantes clasificados en nivel básico.
-          </p>
-
-          <div className="chart-placeholder single-bar">
-            <div
-              className="chart-bar"
-              style={{
-                left: "45%",
-                height: `${clampPercent(porcentajeBasico)}%`,
-              }}
-            />
-          </div>
-        </div>
-
-        <div className="indicator-card">
-          <h2 className="card-title">Promedio por Carrera</h2>
-          <div className="card-value">
-            {topCarreras.length ? Number(topCarreras[0].avg_total || 0).toFixed(2) : "0.00"}
-          </div>
-          <p className="card-description">
-            Las carreras con mejor promedio de puntaje total.
-          </p>
-
-          <div className="chart-placeholder bars-with-labels">
-            {topCarreras.map((c, i) => {
-              const height = (Number(c.avg_total || 0) / maxCarreraAvg) * 100;
-              const positions = ["8%", "26%", "44%", "62%", "80%"];
-
-              return (
-                <div key={`${c.carrera}-${i}`}>
-                  <div
-                    className="chart-bar"
-                    style={{
-                      left: positions[i],
-                      width: "34px",
-                      height: `${clampPercent(height)}%`,
-                    }}
-                    title={`${c.carrera}: ${c.avg_total}`}
-                  />
-                  <span className="bar-bottom-label" style={{ left: positions[i] }}>
-                    {shortLabel(c.carrera, 10)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="indicator-card">
-          <h2 className="card-title">Comparativa 4to vs 7mo Semestre</h2>
-          <div className="card-value">{diferenciaSemestres} pts</div>
-          <p className="card-description">
-            Diferencia real del puntaje promedio entre 4to y 7mo semestre.
-          </p>
-
-          <div className="chart-placeholder">
-            <div
-              className="chart-bar light"
-              style={{
-                left: "22%",
-                width: "42px",
-                height: `${clampPercent((Number(comparativa4to?.avg_total || 0) / 84) * 100)}%`,
-              }}
-              title={`4to: ${comparativa4to?.avg_total || 0}`}
-            />
-            <div
-              className="chart-bar"
-              style={{
-                left: "62%",
-                width: "42px",
-                height: `${clampPercent((Number(comparativa7mo?.avg_total || 0) / 84) * 100)}%`,
-              }}
-              title={`7mo: ${comparativa7mo?.avg_total || 0}`}
-            />
+      <section className="dashboard-analytics-grid">
+        <div className="analytics-card analytics-card-large">
+          <div className="analytics-head">
+            <h2>Distribución por niveles</h2>
+            <p>Porcentaje de estudiantes clasificados en Básico, Funcional y Avanzado.</p>
           </div>
 
-          <div className="sem-labels">
-            <span>4to</span>
-            <span>7mo</span>
-          </div>
-        </div>
-
-        <div className="indicator-card">
-          <h2 className="card-title">Distribución por Niveles</h2>
-          <div className="pie-card-wrap">
-            <div className="pie-chart-real" style={{ background: pieBackground }} />
-            <div className="pie-legend">
+          <div className="pie-card-wrap pie-card-wrap-big">
+            <div className="pie-chart-real pie-chart-real-big" style={{ background: pieBackground }} />
+            <div className="pie-legend pie-legend-big">
               <div className="pie-legend-item">
                 <span className="legend-dot legend-basico" />
-                <span>Básico ({porcentajeBasico}%)</span>
+                <span>Básico</span>
+                <strong>{porcentajeBasico}%</strong>
               </div>
               <div className="pie-legend-item">
                 <span className="legend-dot legend-funcional" />
-                <span>Funcional ({porcentajeFuncional}%)</span>
+                <span>Funcional</span>
+                <strong>{porcentajeFuncional}%</strong>
               </div>
               <div className="pie-legend-item">
                 <span className="legend-dot legend-avanzado" />
-                <span>Avanzado ({porcentajeAvanzado}%)</span>
+                <span>Avanzado</span>
+                <strong>{porcentajeAvanzado}%</strong>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="indicator-card indicator-card-wide">
-          <h2 className="card-title">Top 3 Competencias Más Débiles</h2>
-          <ul className="weak-list">
-            {debiles.length ? (
-              debiles.slice(0, 3).map((item, idx) => (
-                <li key={item.competencia}>
-                  {idx + 1}. {item.competencia} ({Number(item.promedio || 0).toFixed(2)})
-                </li>
-              ))
+        <div className="analytics-card analytics-card-large">
+          <div className="analytics-head">
+            <h2>Comparativa 4to vs 7mo</h2>
+            <p>Puntaje promedio real por semestre académico.</p>
+          </div>
+
+          <div className="big-bars-chart">
+            <div className="big-bars-plot">
+              <div className="big-bar-group">
+                <div
+                  className="big-bar light"
+                  style={{
+                    height: `${clampPercent((Number(comparativa4to?.avg_total || 0) / 84) * 100)}%`,
+                  }}
+                />
+                <span className="big-bar-value">{Number(comparativa4to?.avg_total || 0).toFixed(2)}</span>
+                <span className="big-bar-label">4to</span>
+              </div>
+
+              <div className="big-bar-group">
+                <div
+                  className="big-bar"
+                  style={{
+                    height: `${clampPercent((Number(comparativa7mo?.avg_total || 0) / 84) * 100)}%`,
+                  }}
+                />
+                <span className="big-bar-value">{Number(comparativa7mo?.avg_total || 0).toFixed(2)}</span>
+                <span className="big-bar-label">7mo</span>
+              </div>
+            </div>
+
+            <div className="big-bars-foot">
+              <strong>Diferencia:</strong> {diferenciaSemestres} pts
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="dashboard-bottom-grid">
+        <div className="analytics-card">
+          <div className="analytics-head">
+            <h2>Promedio por carrera</h2>
+            <p>Carreras ordenadas por promedio de puntaje total.</p>
+          </div>
+
+          <div className="career-horizontal-chart">
+            {impacto.length ? (
+              impacto.map((item) => {
+                const width = (Number(item.avg_total || 0) / maxCarreraAvg) * 100;
+                return (
+                  <div key={item.carrera} className="career-row">
+                    <span className="career-row-label">{shortLabel(item.carrera, 24)}</span>
+                    <div className="career-row-track">
+                      <div
+                        className="career-row-fill"
+                        style={{ width: `${clampPercent(width)}%` }}
+                      />
+                    </div>
+                    <strong className="career-row-value">
+                      {Number(item.avg_total || 0).toFixed(2)}
+                    </strong>
+                  </div>
+                );
+              })
             ) : (
-              <li>No hay datos suficientes.</li>
+              <p>No hay datos para mostrar.</p>
             )}
-          </ul>
+          </div>
+        </div>
+
+        <div className="analytics-card">
+          <div className="analytics-head">
+            <h2>Competencias más débiles</h2>
+            <p>Top 3 competencias con menor promedio real.</p>
+          </div>
 
           <div className="weak-mini-bars">
-            {debiles.slice(0, 3).map((item) => (
-              <div key={item.competencia} className="weak-mini-row">
-                <span>{shortLabel(item.competencia, 18)}</span>
-                <div className="weak-mini-track">
-                  <div
-                    className="weak-mini-fill"
-                    style={{
-                      width: `${clampPercent((Number(item.promedio || 0) / 4) * 100)}%`,
-                    }}
-                  />
+            {debiles.length ? (
+              debiles.map((item, idx) => (
+                <div key={item.competencia} className="weak-mini-row">
+                  <span>{idx + 1}. {shortLabel(item.competencia, 20)}</span>
+                  <div className="weak-mini-track">
+                    <div
+                      className="weak-mini-fill"
+                      style={{
+                        width: `${clampPercent((Number(item.promedio || 0) / 4) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <strong>{Number(item.promedio || 0).toFixed(2)}</strong>
                 </div>
-                <strong>{Number(item.promedio || 0).toFixed(2)}</strong>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p>No hay datos suficientes.</p>
+            )}
           </div>
+        </div>
+      </section>
+
+      <section className="analytics-card table-card">
+        <div className="analytics-head">
+          <h2>Resumen por carrera</h2>
+          <p>Intentos, promedios y semáforo de desempeño por carrera.</p>
+        </div>
+
+        <div className="dashboard-table-wrap">
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th>Carrera</th>
+                <th>Intentos</th>
+                <th>Promedio</th>
+                <th>Básico</th>
+                <th>Funcional</th>
+                <th>Avanzado</th>
+                <th>Semáforo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {impacto.length ? (
+                impacto.map((row) => (
+                  <tr key={row.carrera}>
+                    <td>{row.carrera}</td>
+                    <td>{Number(row.n || 0)}</td>
+                    <td>{Number(row.avg_total || 0).toFixed(2)}</td>
+                    <td>{Number(row.basico || 0)}</td>
+                    <td>{Number(row.funcional || 0)}</td>
+                    <td>{Number(row.avanzado || 0)}</td>
+                    <td>
+                      <span className={`status-pill ${semaforoClase(row.avg_total)}`}>
+                        {semaforoTexto(row.avg_total)}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="7">No hay datos disponibles para los filtros seleccionados.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
     </>
