@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/login/login";
 
-import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
+import StudentRoute from "./components/StudentRoute";
 
 import AdminLayout from "./pages/dashboard/admin/AdminLayout";
 import AdminDashboard from "./pages/dashboard/admin/AdminDashboard";
@@ -14,16 +15,19 @@ import NuevoUsuario from "./pages/dashboard/admin/usuarios/NuevoUsuario";
 import EditarUsuario from "./pages/dashboard/admin/usuarios/EditarUsuario";
 import ListaUsuarios from "./pages/dashboard/admin/usuarios/ListaUsuarios";
 
+import StudentLayout from "./pages/dashboard/estudiante/StudentLayout";
+import StudentDashboard from "./pages/dashboard/estudiante/StudentDashboard";
+import StudentEvaluaciones from "./pages/dashboard/estudiante/StudentEvaluaciones";
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
 
-        <Route element={<ProtectedRoute />}>
+        <Route element={<AdminRoute />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
-
             <Route path="evaluacion-diagnostica" element={<GestionEvDiag />} />
             <Route path="evaluacion-diagnostica/test" element={<TestDiagnostico />} />
 
@@ -35,6 +39,14 @@ export default function App() {
             </Route>
           </Route>
         </Route>
+
+       <Route element={<StudentRoute />}>
+      <Route path="/estudiante" element={<StudentLayout />}>
+        <Route index element={<StudentDashboard />} />
+        <Route path="evaluaciones" element={<StudentEvaluaciones />} />
+        <Route path="evaluaciones/test" element={<TestDiagnostico />} />
+      </Route>
+    </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

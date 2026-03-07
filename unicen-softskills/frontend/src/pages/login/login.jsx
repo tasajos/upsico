@@ -53,7 +53,13 @@ export default function Login() {
       setStatus("success");
 
       setTimeout(() => {
+       if (data.user.rol === "Administrador") {
         navigate("/admin");
+      } else if (data.user.rol === "Estudiante") {
+        navigate("/estudiante");
+      } else {
+        throw new Error("Rol no permitido.");
+      }
       }, 250);
     } catch (err) {
       setStatus("error");

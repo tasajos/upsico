@@ -4,9 +4,6 @@ import { pool } from "../db.js";
 
 const router = express.Router();
 
-/* =========================
-   POST - Login
-========================= */
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -40,9 +37,9 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Credenciales inválidas." });
     }
 
-    // Primera fase: solo acceso administrador
-    if (user.rol !== "Administrador") {
-      return res.status(403).json({ message: "Acceso permitido solo para administradores." });
+    // Solo permitimos por ahora Administrador y Estudiante
+    if (!["Administrador", "Estudiante"].includes(user.rol)) {
+      return res.status(403).json({ message: "Rol sin acceso al sistema." });
     }
 
     return res.json({
