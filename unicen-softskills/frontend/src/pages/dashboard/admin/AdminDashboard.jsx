@@ -364,9 +364,26 @@ export default function AdminDashboard() {
 
       <section className="analytics-card table-card">
         <div className="analytics-head">
-          <h2>Resumen por carrera</h2>
-          <p>Intentos, promedios y semáforo de desempeño por carrera.</p>
-        </div>
+  <h2>Resumen por carrera</h2>
+  <p>Intentos, promedios y semáforo de desempeño por carrera.</p>
+
+  <div className="status-legend">
+    <div className="status-legend-item">
+      <span className="status-pill danger">Básico</span>
+      <span>Requiere intervención prioritaria</span>
+    </div>
+
+    <div className="status-legend-item">
+      <span className="status-pill warning">Funcional</span>
+      <span>Requiere seguimiento</span>
+    </div>
+
+    <div className="status-legend-item">
+      <span className="status-pill success">Avanzado</span>
+      <span>Buen desempeño</span>
+    </div>
+  </div>
+</div>
 
         <div className="dashboard-table-wrap">
           <table className="dashboard-table">
@@ -392,10 +409,17 @@ export default function AdminDashboard() {
                     <td>{Number(row.funcional || 0)}</td>
                     <td>{Number(row.avanzado || 0)}</td>
                     <td>
+                    <div className="status-cell">
                       <span className={`status-pill ${semaforoClase(row.avg_total)}`}>
                         {semaforoTexto(row.avg_total)}
                       </span>
-                    </td>
+                      <small className="status-help">
+                        {semaforoClase(row.avg_total) === "danger" && "Requiere intervención prioritaria"}
+                        {semaforoClase(row.avg_total) === "warning" && "Requiere seguimiento"}
+                        {semaforoClase(row.avg_total) === "success" && "Buen desempeño"}
+                      </small>
+                    </div>
+                  </td>
                   </tr>
                 ))
               ) : (
