@@ -229,7 +229,28 @@ router.get("/intentos/:id", async (req, res) => {
 // GET /api/diagnostico/resumen
 router.get("/resumen", async (req, res) => {
   try {
-    const [rows] = await pool.query(`
+    const { carrera, desde, hasta } = req.query;
+
+    const where = [];
+    const params = [];
+
+    if (carrera) {
+      where.push("carrera = ?");
+      params.push(carrera);
+    }
+    if (desde) {
+      where.push("DATE(fecha_aplicacion) >= DATE(?)");
+      params.push(desde);
+    }
+    if (hasta) {
+      where.push("DATE(fecha_aplicacion) <= DATE(?)");
+      params.push(hasta);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+
+    const [rows] = await pool.query(
+      `
       SELECT
         COUNT(*) AS total,
         SUM(nivel='BASICO') AS basico,
@@ -237,7 +258,10 @@ router.get("/resumen", async (req, res) => {
         SUM(nivel='AVANZADO') AS avanzado,
         ROUND(AVG(total_puntaje), 2) AS promedio
       FROM diagnostico_intento
-    `);
+      ${whereSql}
+      `,
+      params
+    );
 
     return res.json({ ok: true, resumen: rows[0] });
   } catch (e) {
@@ -568,6 +592,33 @@ router.patch("/tests/:id/activar", async (req, res) => {
     });
   } finally {
     conn.release();
+  }
+});
+
+// GET /api/diagnostico/competencias-debiles
+router.get("/competencias-debiles", async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT
+        p.competencia,
+        ROUND(AVG(
+          CASE
+            WHEN p.invertido = 1 THEN (5 - r.valor)
+            ELSE r.valor
+          END
+        ), 2) AS promedio
+      FROM diagnostico_respuesta r
+      JOIN diagnostico_pregunta p ON p.id = r.pregunta_id
+      WHERE p.competencia IS NOT NULL
+        AND p.competencia <> ''
+      GROUP BY p.competencia
+      ORDER BY promedio ASC
+      LIMIT 3
+    `);
+
+    return res.json({ ok: true, rows });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e.message });
   }
 });
 export default router;
