@@ -122,69 +122,80 @@ export default function TestDiagnostico() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setResult(null);
+  e.preventDefault();
+  setError("");
+  setResult(null);
 
-    if (!estudianteNombre.trim() || !carrera.trim()) {
-      setError("Completa Nombre y Carrera.");
-      return;
+  // Validación detallada de campos
+  if (!estudianteNombre.trim()) {
+    setError("⚠️ Falta completar: Nombre completo.");
+    return;
+  }
+  if (!carrera.trim()) {
+    setError("⚠️ Falta completar: Carrera.");
+    return;
+  }
+  if (!semestre) {
+    setError("⚠️ Falta completar: Semestre.");
+    return;
+  }
+  if (!fechaAplicacion) {
+    setError("⚠️ Falta completar: Fecha.");
+    return;
+  }
+  if (answeredCount !== totalQuestions) {
+    // Encontrar qué preguntas faltan
+    const faltantes = preguntas
+      .filter((p) => !answers[p.id])
+      .map((p) => `#${p.numero}`)
+      .join(", ");
+    setError(`⚠️ Faltan respuestas en las preguntas: ${faltantes}`);
+    return;
+  }
+
+  try {
+    setSending(true);
+
+    const payload = {
+      test_id: Number(testId || test?.id),
+      estudiante_nombre: estudianteNombre,
+      carrera,
+      semestre,
+      fecha_aplicacion: fechaAplicacion,
+      respuestas: preguntas.map((p) => ({
+        pregunta_id: p.id,
+        valor: Number(answers[p.id]),
+      })),
+    };
+
+    if (!payload.test_id) {
+      throw new Error("No se pudo determinar el test_id. Volvé a cargar la página.");
     }
 
-    if (answeredCount !== totalQuestions) {
-      setError(`Faltan respuestas (${answeredCount}/${totalQuestions}).`);
-      return;
+    const res = await fetch(`${API}/diagnostico/enviar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      throw new Error(data?.message || "No se pudo enviar el test.");
     }
 
-    try {
-      setSending(true);
+    setResult({
+      intento_id: data.intento_id,
+      total: data.total,
+      nivel: data.nivel,
+    });
+    setShowModal(true); // Modal se encarga de la redirección
 
-      const payload = {
-        test_id: Number(testId || test?.id),
-        estudiante_nombre: estudianteNombre,
-        carrera,
-        semestre,
-        fecha_aplicacion: fechaAplicacion,
-        respuestas: preguntas.map((p) => ({
-          pregunta_id: p.id,
-          valor: Number(answers[p.id]),
-        })),
-      };
-
-      if (!payload.test_id) {
-        throw new Error("No se pudo determinar el test_id. Vuelve a cargar la página.");
-      }
-
-      const res = await fetch(`${API}/diagnostico/enviar`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) {
-        throw new Error(data?.message || "No se pudo enviar el test.");
-      }
-
-      setResult({
-        intento_id: data.intento_id,
-        total: data.total,
-        nivel: data.nivel,
-      });
-      setShowModal(true);
-
-      // Si es estudiante, volver al dashboard después de enviar
-      if (isStudent) {
-        setTimeout(() => {
-          navigate("/estudiante");
-        }, 1200);
-      }
-    } catch (e) {
-      setError(e.message || "Error enviando test.");
-    } finally {
-      setSending(false);
-    }
-  };
+  } catch (e) {
+    setError(e.message || "Error enviando test.");
+  } finally {
+    setSending(false);
+  }
+};
 
   if (loading) {
     return (
@@ -374,17 +385,77 @@ export default function TestDiagnostico() {
           </div>
         </section>
       </form>
-      {showModal && (
+      {showModal && result && (
   <div className="td-modal-overlay">
     <div className="td-modal">
-      <h2>✅ Evaluación terminada</h2>
-      <p>Tu evaluación fue enviada correctamente.</p>
+
+      <div style={{ fontSize: 48, marginBottom: 8 }}>🎓</div>
+
+      <h2 style={{ color: "#1e3a8a", marginBottom: 4 }}>
+        ¡Evaluación completada!
+      </h2>
+
+      <p style={{ color: "#64748b", marginBottom: 20 }}>
+        Tu evaluación fue enviada correctamente.
+      </p>
+
+      {/* Puntaje */}
+      <div style={{
+        background: "#eff6ff",
+        border: "1px solid #bfdbfe",
+        borderRadius: 14,
+        padding: "16px 24px",
+        marginBottom: 16,
+        textAlign: "center",
+      }}>
+        <div style={{ color: "#64748b", fontSize: 13, marginBottom: 4 }}>
+          Puntaje obtenido
+        </div>
+        <div style={{ fontSize: 48, fontWeight: 900, color: "#1e3a8a", lineHeight: 1 }}>
+          {result.total}
+        </div>
+        <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
+          de {totalQuestions * 4} puntos posibles
+        </div>
+      </div>
+
+      {/* Nivel */}
+      <div style={{
+        display: "inline-block",
+        padding: "8px 24px",
+        borderRadius: 999,
+        fontWeight: 800,
+        fontSize: 16,
+        marginBottom: 24,
+        background:
+          result.nivel === "AVANZADO" ? "#dcfce7" :
+          result.nivel === "FUNCIONAL" ? "#fef9c3" : "#fee2e2",
+        color:
+          result.nivel === "AVANZADO" ? "#15803d" :
+          result.nivel === "FUNCIONAL" ? "#854d0e" : "#b91c1c",
+      }}>
+        Nivel: {result.nivel}
+      </div>
+
+      <p style={{ color: "#64748b", fontSize: 13, marginBottom: 20 }}>
+        {result.nivel === "AVANZADO" && "¡Excelente! Tenés un nivel avanzado de habilidades."}
+        {result.nivel === "FUNCIONAL" && "Buen trabajo. Hay algunas áreas que podés mejorar."}
+        {result.nivel === "BASICO" && "Te recomendamos revisar los recursos de apoyo disponibles."}
+      </p>
 
       <button
         className="td-modal-btn"
-        onClick={() => navigate("/estudiante")}
+        onClick={() => navigate("/estudiante", {
+          state: {
+            resultado: {
+              total: result.total,
+              nivel: result.nivel,
+              intento_id: result.intento_id,
+            }
+          }
+        })}
       >
-        Volver al panel
+        Ver mis recomendaciones →
       </button>
     </div>
   </div>
