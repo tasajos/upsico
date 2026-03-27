@@ -40,7 +40,6 @@ function getCursosRecomendados(nivel) {
     .slice(0, 4);
 }
 
-// ── Divisor de sección ────────────────────────────────────────────────────────
 function SectionDivider({ number, title, subtitle }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "28px 0 16px" }}>
@@ -52,7 +51,7 @@ function SectionDivider({ number, title, subtitle }) {
       }}>
         {number}
       </div>
-      <div style={{ flex: 1 }}>
+      <div>
         <div style={{ fontSize: 15, fontWeight: 700, color: "#1e293b", lineHeight: 1.2 }}>{title}</div>
         {subtitle && <div style={{ fontSize: 12, color: "#64748b", marginTop: 1 }}>{subtitle}</div>}
       </div>
@@ -61,22 +60,24 @@ function SectionDivider({ number, title, subtitle }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 export default function StudentDashboard() {
   const location = useLocation();
-  const resultado = location.state?.resultado || null;
+
+  // Leer resultado: primero de navigation state, luego de localStorage
+  const resultado =
+    location.state?.resultado ||
+    JSON.parse(localStorage.getItem("ultimoResultado") || "null");
+
   const col = resultado ? nivelConfig[resultado.nivel] : null;
   const habilidades = resultado ? HABILIDADES_POR_NIVEL[resultado.nivel] : [];
   const cursos = resultado ? getCursosRecomendados(resultado.nivel) : [];
 
-  // Número de sección dinámico según si hay resultado
   let secNum = 1;
 
   return (
     <div style={{ padding: "4px 0 48px" }}>
 
-      {/* ── Encabezado ── */}
+      {/* Encabezado */}
       <div style={{ marginBottom: 4 }}>
         <h1 style={{ color: "#1e3a8a", fontSize: 28, fontWeight: 900, margin: "0 0 3px" }}>
           Bienvenido
@@ -86,9 +87,7 @@ export default function StudentDashboard() {
         </p>
       </div>
 
-      {/* ═══════════════════════════════════════════════════
-          SECCIÓN 1 — Resultado (solo si hay resultado)
-      ═══════════════════════════════════════════════════ */}
+      {/* ── SECCIÓN 1: Resultado ── */}
       {resultado && col && (
         <>
           <SectionDivider
@@ -96,21 +95,13 @@ export default function StudentDashboard() {
             title="Resultado de tu evaluación"
             subtitle="Diagnóstico de habilidades blandas · COL-UNICEN"
           />
-
           <div style={{
-            background: "#fff",
-            border: "0.5px solid #e2e8f0",
-            borderRadius: 14,
-            overflow: "hidden",
-            maxWidth: 500,
+            background: "#fff", border: "0.5px solid #e2e8f0",
+            borderRadius: 14, overflow: "hidden", maxWidth: 500,
           }}>
-            {/* Header coloreado */}
             <div style={{
-              background: col.headerBg,
-              padding: "16px 20px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
+              background: col.headerBg, padding: "16px 20px",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
             }}>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
@@ -121,19 +112,12 @@ export default function StudentDashboard() {
                 </div>
               </div>
               <span style={{
-                background: "rgba(255,255,255,0.22)",
-                color: "#fff",
-                padding: "4px 14px",
-                borderRadius: 999,
-                fontSize: 12,
-                fontWeight: 800,
-                letterSpacing: "0.02em",
+                background: "rgba(255,255,255,0.22)", color: "#fff",
+                padding: "4px 14px", borderRadius: 999, fontSize: 12, fontWeight: 800,
               }}>
                 Nivel {resultado.nivel}
               </span>
             </div>
-
-            {/* Body */}
             <div style={{ padding: "18px 20px" }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 14 }}>
                 <span style={{ fontSize: 42, fontWeight: 900, color: "#1e3a8a", lineHeight: 1 }}>
@@ -141,35 +125,19 @@ export default function StudentDashboard() {
                 </span>
                 <span style={{ fontSize: 15, color: "#64748b", fontWeight: 500 }}>/ 84 puntos</span>
               </div>
-
-              {/* Barra de progreso con rangos */}
               <div style={{ marginBottom: 14 }}>
-                <div style={{
-                  display: "flex", justifyContent: "space-between",
-                  fontSize: 10, color: "#94a3b8", marginBottom: 5,
-                }}>
-                  <span>21 — Básico</span>
-                  <span>43 — Funcional</span>
-                  <span>64 — Avanzado — 84</span>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#94a3b8", marginBottom: 5 }}>
+                  <span>21 — Básico</span><span>43 — Funcional</span><span>64 — Avanzado — 84</span>
                 </div>
                 <div style={{ height: 8, borderRadius: 999, background: "#e2e8f0", overflow: "hidden" }}>
                   <div style={{
-                    height: "100%", borderRadius: 999,
-                    background: col.barColor,
+                    height: "100%", borderRadius: 999, background: col.barColor,
                     width: `${Math.round(((resultado.total - 21) / 63) * 100)}%`,
                     transition: "width 0.6s ease",
                   }} />
                 </div>
               </div>
-
-              {/* Mensaje nivel */}
-              <div style={{
-                fontSize: 13, color: col.text,
-                background: col.bg,
-                padding: "10px 14px",
-                borderRadius: 8,
-                fontWeight: 500,
-              }}>
+              <div style={{ fontSize: 13, color: col.text, background: col.bg, padding: "10px 14px", borderRadius: 8, fontWeight: 500 }}>
                 {col.mensaje}
               </div>
             </div>
@@ -177,37 +145,23 @@ export default function StudentDashboard() {
         </>
       )}
 
-      {/* ═══════════════════════════════════════════════════
-          SECCIÓN 2 — Mis Evaluaciones
-      ═══════════════════════════════════════════════════ */}
+      {/* ── SECCIÓN 2: Mis Evaluaciones ── */}
       <SectionDivider
         number={secNum++}
         title="Mis Evaluaciones"
         subtitle="Evaluaciones diagnósticas disponibles para rendir"
       />
-
       <div style={{
-        background: "#fff",
-        border: "0.5px solid #e2e8f0",
-        borderRadius: 12,
-        overflow: "hidden",
-        maxWidth: 320,
+        background: "#fff", border: "0.5px solid #e2e8f0",
+        borderRadius: 12, overflow: "hidden", maxWidth: 320,
       }}>
-        {/* Franja azul estilo Google Classroom */}
         <div style={{
-          background: "#1e3a8a",
-          height: 80,
-          padding: "12px 16px",
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "space-between",
+          background: "#1e3a8a", height: 80, padding: "12px 16px",
+          display: "flex", alignItems: "flex-end", justifyContent: "space-between",
         }}>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>
-            COL-UNICEN
-          </span>
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>COL-UNICEN</span>
           <span style={{ fontSize: 34, opacity: 0.3 }}>📋</span>
         </div>
-
         <div style={{ padding: "14px 16px" }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", marginBottom: 3 }}>
             Evaluación Diagnóstica de Habilidades Blandas
@@ -219,10 +173,8 @@ export default function StudentDashboard() {
             to="/estudiante/evaluaciones"
             style={{
               display: "inline-flex", alignItems: "center", gap: 6,
-              background: "#1e3a8a", color: "#fff",
-              textDecoration: "none",
-              padding: "8px 16px", borderRadius: 8,
-              fontWeight: 700, fontSize: 12,
+              background: "#1e3a8a", color: "#fff", textDecoration: "none",
+              padding: "8px 16px", borderRadius: 8, fontWeight: 700, fontSize: 12,
             }}
           >
             {resultado ? "Rendir nuevamente" : "Comenzar evaluación →"}
@@ -230,9 +182,7 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════
-          SECCIÓN 3 — Habilidades (solo si hay resultado)
-      ═══════════════════════════════════════════════════ */}
+      {/* ── SECCIÓN 3: Habilidades ── */}
       {resultado && habilidades.length > 0 && (
         <>
           <SectionDivider
@@ -240,21 +190,15 @@ export default function StudentDashboard() {
             title="Habilidades a fortalecer"
             subtitle="Competencias prioritarias identificadas en tu evaluación"
           />
-
           <div style={{
-            background: "#fff",
-            border: "0.5px solid #e2e8f0",
-            borderRadius: 12,
-            padding: "16px 20px",
+            background: "#fff", border: "0.5px solid #e2e8f0",
+            borderRadius: 12, padding: "16px 20px",
           }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {habilidades.map((h) => (
                 <span key={h} style={{
-                  padding: "7px 16px", borderRadius: 999,
-                  fontSize: 12, fontWeight: 600,
-                  border: "0.5px solid #cbd5e1",
-                  color: "#334155",
-                  background: "#f8fafc",
+                  padding: "7px 16px", borderRadius: 999, fontSize: 12, fontWeight: 600,
+                  border: "0.5px solid #cbd5e1", color: "#334155", background: "#f8fafc",
                 }}>
                   {h}
                 </span>
@@ -264,9 +208,7 @@ export default function StudentDashboard() {
         </>
       )}
 
-      {/* ═══════════════════════════════════════════════════
-          SECCIÓN 4 — Cursos recomendados (solo si hay resultado)
-      ═══════════════════════════════════════════════════ */}
+      {/* ── SECCIÓN 4: Cursos recomendados ── */}
       {resultado && cursos.length > 0 && (
         <>
           <SectionDivider
@@ -274,7 +216,6 @@ export default function StudentDashboard() {
             title="Cursos recomendados"
             subtitle="Seleccionados por el COL según tus áreas de mejora"
           />
-
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
@@ -284,41 +225,27 @@ export default function StudentDashboard() {
               <div key={curso.nombre} style={{
                 background: "#fff",
                 border: i === 0 ? `1.5px solid ${ICONOS_CURSOS[i].color}` : "0.5px solid #e2e8f0",
-                borderRadius: 12,
-                overflow: "hidden",
-                display: "flex",
-                flexDirection: "column",
+                borderRadius: 12, overflow: "hidden",
+                display: "flex", flexDirection: "column",
               }}>
-                {/* Franja color */}
                 <div style={{
-                  background: ICONOS_CURSOS[i].color,
-                  height: 80,
-                  padding: "10px 14px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  position: "relative",
+                  background: ICONOS_CURSOS[i].color, height: 80,
+                  padding: "10px 14px", display: "flex", flexDirection: "column",
+                  justifyContent: "space-between", position: "relative",
                 }}>
                   {i === 0 && (
                     <span style={{
-                      display: "inline-flex",
-                      fontSize: 10, fontWeight: 700,
+                      display: "inline-flex", fontSize: 10, fontWeight: 700,
                       padding: "2px 8px", borderRadius: 4,
-                      background: "rgba(255,255,255,0.25)",
-                      color: "#fff", alignSelf: "flex-start",
+                      background: "rgba(255,255,255,0.25)", color: "#fff", alignSelf: "flex-start",
                     }}>
                       ⭐ Más recomendado
                     </span>
                   )}
-                  <span style={{
-                    position: "absolute", bottom: 8, right: 12,
-                    fontSize: 30, opacity: 0.35,
-                  }}>
+                  <span style={{ position: "absolute", bottom: 8, right: 12, fontSize: 30, opacity: 0.35 }}>
                     {ICONOS_CURSOS[i].emoji}
                   </span>
                 </div>
-
-                {/* Cuerpo */}
                 <div style={{ padding: "12px 14px", flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", lineHeight: 1.35, marginBottom: 3 }}>
                     {curso.nombre}
@@ -326,14 +253,11 @@ export default function StudentDashboard() {
                   <div style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>
                     Centro de Oportunidades Laborales · COL-UNICEN
                   </div>
-
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                     {curso.habilidades.slice(0, 2).map((h) => (
                       <span key={h} style={{
-                        fontSize: 10, padding: "2px 7px", borderRadius: 4,
-                        fontWeight: 600,
-                        background: `${ICONOS_CURSOS[i].color}18`,
-                        color: ICONOS_CURSOS[i].color,
+                        fontSize: 10, padding: "2px 7px", borderRadius: 4, fontWeight: 600,
+                        background: `${ICONOS_CURSOS[i].color}18`, color: ICONOS_CURSOS[i].color,
                       }}>
                         {h.split(" y ")[0].split(" de ")[0]}
                       </span>
@@ -353,7 +277,6 @@ export default function StudentDashboard() {
           </div>
         </>
       )}
-
     </div>
   );
 }
