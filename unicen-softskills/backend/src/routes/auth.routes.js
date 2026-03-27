@@ -38,7 +38,7 @@ router.post("/login", async (req, res) => {
     }
 
     // Solo permitimos por ahora Administrador y Estudiante
-    if (!["Administrador", "Estudiante"].includes(user.rol)) {
+    if (!["Administrador", "Estudiante","Gestor"].includes(user.rol)) {
       return res.status(403).json({ message: "Rol sin acceso al sistema." });
     }
 

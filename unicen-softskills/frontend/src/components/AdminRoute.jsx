@@ -7,9 +7,13 @@ export default function AdminRoute() {
 
   try {
     const user = JSON.parse(raw);
-    if (!user || user.rol !== "Administrador") {
+    
+    const rolesPermitidos = ["Administrador", "Gestor"];
+    
+    if (!user || !rolesPermitidos.includes(user.rol)) {
       return <Navigate to="/" replace />;
     }
+    
     return <Outlet />;
   } catch {
     return <Navigate to="/" replace />;

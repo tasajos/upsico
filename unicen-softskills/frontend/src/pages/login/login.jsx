@@ -17,57 +17,56 @@ export default function Login() {
     return email.trim().length > 0 && password.trim().length > 0 && !isSubmitting;
   }, [email, password, isSubmitting]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrorMsg("");
-    setStatus("idle");
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  setErrorMsg("");
+  setStatus("idle");
 
-    if (!email || !password) {
-      setStatus("error");
-      setErrorMsg("⚠️ Complete todos los campos.");
-      return;
+  if (!email || !password) {
+    setStatus("error");
+    setErrorMsg("⚠️ Complete todos los campos.");
+    return;
+  }
+
+  try {
+    setIsSubmitting(true);
+
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: email.trim().toLowerCase(),
+        password,
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data?.message || "No se pudo iniciar sesión.");
     }
 
-    try {
-      setIsSubmitting(true);
+    localStorage.setItem("authUser", JSON.stringify(data.user));
+    setStatus("success");
 
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          password,
-        }),
-      });
+    const rol = data.user.rol;
 
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(data?.message || "No se pudo iniciar sesión.");
-      }
-
-      localStorage.setItem("authUser", JSON.stringify(data.user));
-
-      setStatus("success");
-
-      setTimeout(() => {
-       if (data.user.rol === "Administrador") {
-        navigate("/admin");
-      } else if (data.user.rol === "Estudiante") {
-        navigate("/estudiante");
-      } else {
-        throw new Error("Rol no permitido.");
-      }
-      }, 250);
-    } catch (err) {
+    if (rol === "Administrador" || rol === "Gestor") {
+      setTimeout(() => navigate("/admin"), 250);
+    } else if (rol === "Estudiante") {
+      setTimeout(() => navigate("/estudiante"), 250);
+    } else {
       setStatus("error");
-      setErrorMsg(err.message || "❌ Ocurrió un error al iniciar sesión.");
-    } finally {
-      setIsSubmitting(false);
+      setErrorMsg("❌ Rol sin acceso al sistema.");
     }
-  };
+
+  } catch (err) {
+    setStatus("error");
+    setErrorMsg(err.message || "❌ Ocurrió un error al iniciar sesión.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const buttonText =
     status === "success"
