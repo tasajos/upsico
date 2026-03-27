@@ -18,6 +18,7 @@ import ListaUsuarios from "./pages/dashboard/admin/usuarios/ListaUsuarios";
 import StudentLayout from "./pages/dashboard/estudiante/StudentLayout";
 import StudentDashboard from "./pages/dashboard/estudiante/StudentDashboard";
 import StudentEvaluaciones from "./pages/dashboard/estudiante/StudentEvaluaciones";
+import StudentPerfil from "./pages/dashboard/estudiante/StudentPerfil";
 
 export default function App() {
   return (
@@ -45,6 +46,7 @@ export default function App() {
         <Route index element={<StudentDashboard />} />
         <Route path="evaluaciones" element={<StudentEvaluaciones />} />
         <Route path="evaluaciones/test" element={<TestDiagnostico />} />
+        <Route path="perfil" element={<StudentPerfil />} />
       </Route>
     </Route>
 

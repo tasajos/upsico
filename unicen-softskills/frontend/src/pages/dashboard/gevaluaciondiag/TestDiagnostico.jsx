@@ -281,9 +281,22 @@ export default function TestDiagnostico() {
           </label>
 
           <label className="td-field">
-            <span>Carrera</span>
-            <input value={carrera} onChange={(e) => setCarrera(e.target.value)} />
-          </label>
+  <span>Carrera</span>
+  <select value={carrera} onChange={(e) => setCarrera(e.target.value)}>
+    <option value="">-- Seleccioná tu carrera --</option>
+    <option>Administración de Empresas</option>
+    <option>Administración de Empresas Turísticas, Hoteleras y Gastronómicas</option>
+    <option>Contaduría Pública</option>
+    <option>Derecho y Ciencias Jurídicas</option>
+    <option>Fisioterapia y Kinesiología</option>
+    <option>Ingeniería Comercial</option>
+    <option>Ingeniería Financiera</option>
+    <option>Innovación Digital e Inteligencia Artificial</option>
+    <option>Medicina</option>
+    <option>Propaganda, Publicidad y Marketing</option>
+    <option>Psicología</option>
+  </select>
+</label>
 
           <div className="td-row">
             <label className="td-field">
