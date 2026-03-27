@@ -56,7 +56,8 @@ router.get("/test-activo", async (req, res) => {
  * }
  */
 router.post("/enviar", async (req, res) => {
-  const { test_id, estudiante_nombre, carrera, semestre, fecha_aplicacion, respuestas } = req.body;
+  //const { test_id, estudiante_nombre, carrera, semestre, fecha_aplicacion, respuestas } = req.body;
+  const { test_id, estudiante_nombre, carrera, semestre, fecha_aplicacion, respuestas, usuario_id } = req.body;
 
   if (!test_id || !estudiante_nombre || !carrera || !semestre || !fecha_aplicacion) {
     return res.status(400).json({ ok: false, message: "Faltan datos (incluye test_id)." });
@@ -118,11 +119,11 @@ router.post("/enviar", async (req, res) => {
       await conn.beginTransaction();
 
       const [insIntento] = await conn.query(
-        `INSERT INTO diagnostico_intento
-          (test_id, estudiante_nombre, carrera, semestre, fecha_aplicacion, total_puntaje, nivel)
-         VALUES (?,?,?,?,?,?,?)`,
-        [test_id, estudiante_nombre, carrera, String(semestre), fecha_aplicacion, total, nivel]
-      );
+      `INSERT INTO diagnostico_intento
+    (test_id, estudiante_nombre, carrera, semestre, fecha_aplicacion, total_puntaje, nivel, usuario_id)
+   VALUES (?,?,?,?,?,?,?,?)`,
+  [test_id, estudiante_nombre, carrera, String(semestre), fecha_aplicacion, total, nivel, usuario_id || null]
+);
 
       const intento_id = insIntento.insertId;
 
@@ -646,4 +647,39 @@ router.get("/competencias-debiles", async (req, res) => {
     return res.status(500).json({ ok: false, error: e.message });
   }
 });
+
+// GET /api/diagnostico/mi-ultimo-resultado
+router.get("/mi-ultimo-resultado", async (req, res) => {
+  try {
+    const { usuario_id } = req.query;
+    if (!usuario_id) return res.status(400).json({ ok: false, message: "Falta usuario_id." });
+
+    const [rows] = await pool.query(
+      `SELECT id, total_puntaje, nivel, carrera, semestre, fecha_aplicacion, creado_en
+       FROM diagnostico_intento
+       WHERE usuario_id = ?
+       ORDER BY creado_en DESC
+       LIMIT 1`,
+      [usuario_id]
+    );
+
+    if (!rows.length) return res.json({ ok: true, resultado: null });
+
+    const r = rows[0];
+    return res.json({
+      ok: true,
+      resultado: {
+        intento_id: r.id,
+        total: r.total_puntaje,
+        nivel: r.nivel,
+        carrera: r.carrera,
+        semestre: r.semestre,
+        fecha: r.fecha_aplicacion,
+      },
+    });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 export default router;

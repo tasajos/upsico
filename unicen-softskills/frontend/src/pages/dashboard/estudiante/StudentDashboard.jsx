@@ -1,4 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
+
+const API = "http://localhost:5000/api";
 
 const ICONOS_CURSOS = [
   { color: "#1e3a8a", emoji: "🏆" },
@@ -63,16 +66,47 @@ function SectionDivider({ number, title, subtitle }) {
 export default function StudentDashboard() {
   const location = useLocation();
 
-  // Leer resultado: primero de navigation state, luego de localStorage
-  const resultado =
-    location.state?.resultado ||
-    JSON.parse(localStorage.getItem("ultimoResultado") || "null");
+  const authUser = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem("authUser")); } catch { return null; }
+  }, []);
+
+  const [resultado, setResultado] = useState(location.state?.resultado || null);
+  const [loadingResultado, setLoadingResultado] = useState(false);
+
+  useEffect(() => {
+    // Si viene del modal, ya tenemos el resultado
+    if (location.state?.resultado) {
+      setResultado(location.state.resultado);
+      return;
+    }
+    // Si no, buscar en BD
+    if (!authUser?.id) return;
+
+    const fetchResultado = async () => {
+      try {
+        setLoadingResultado(true);
+        const res = await fetch(`${API}/diagnostico/mi-ultimo-resultado?usuario_id=${authUser.id}`);
+        const data = await res.json();
+        if (data.ok && data.resultado) setResultado(data.resultado);
+      } catch (e) {
+        console.error("Error cargando resultado:", e);
+      } finally {
+        setLoadingResultado(false);
+      }
+    };
+
+    fetchResultado();
+  }, [authUser?.id, location.state?.resultado]);
 
   const col = resultado ? nivelConfig[resultado.nivel] : null;
   const habilidades = resultado ? HABILIDADES_POR_NIVEL[resultado.nivel] : [];
   const cursos = resultado ? getCursosRecomendados(resultado.nivel) : [];
 
   let secNum = 1;
+
+
+
+
 
   return (
     <div style={{ padding: "4px 0 48px" }}>
@@ -86,6 +120,11 @@ export default function StudentDashboard() {
           Panel del estudiante · Centro de Oportunidades Laborales
         </p>
       </div>
+      {loadingResultado && (
+  <div style={{ color: "#64748b", fontSize: 13, margin: "16px 0", display: "flex", alignItems: "center", gap: 8 }}>
+    ⏳ Cargando tu último resultado...
+  </div>
+)}
 
       {/* ── SECCIÓN 1: Resultado ── */}
       {resultado && col && (

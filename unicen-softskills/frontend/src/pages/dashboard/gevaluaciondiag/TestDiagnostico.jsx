@@ -147,6 +147,7 @@ export default function TestDiagnostico() {
           pregunta_id: p.id,
           valor: Number(answers[p.id]),
         })),
+          usuario_id: authUser?.id || null,  
       };
 
       if (!payload.test_id) {
