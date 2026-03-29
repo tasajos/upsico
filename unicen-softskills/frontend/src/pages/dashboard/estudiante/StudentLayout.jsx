@@ -10,7 +10,8 @@ const NAV_ITEMS = [
 export default function StudentLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const isMobile = window.innerWidth < 768;
+const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
 
   let authUser = null;
   try { authUser = JSON.parse(localStorage.getItem("authUser")); } catch {}
@@ -36,6 +37,8 @@ export default function StudentLayout() {
         display: "flex", flexDirection: "column",
         transition: "width 0.2s ease, min-width 0.2s ease",
         overflow: "hidden", zIndex: 10,
+        position: isMobile ? "fixed" : "relative",
+  height: isMobile ? "100vh" : "auto",
       }}>
 
         {/* Logo + toggle */}
@@ -67,11 +70,12 @@ export default function StudentLayout() {
           {NAV_ITEMS.map((item) => {
             const active = location.pathname === item.path;
             return (
-              <Link key={item.path} to={item.path} style={{
+              <Link key={item.path} to={item.path} onClick={() => isMobile && setSidebarOpen(false)} style={{
                 display: "flex", alignItems: "center", gap: 12,
                 padding: "10px 12px", borderRadius: 10, marginBottom: 4,
                 textDecoration: "none",
                 background: active ? "#eff6ff" : "transparent",
+                
                 color: active ? "#1e3a8a" : "#475569",
                 fontWeight: active ? 700 : 500, fontSize: 14,
                 transition: "background 0.15s",
@@ -79,6 +83,7 @@ export default function StudentLayout() {
               }}>
                 <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
                 {sidebarOpen && item.label}
+                
               </Link>
             );
           })}
@@ -124,6 +129,16 @@ export default function StudentLayout() {
           </button>
         </div>
       </aside>
+
+{isMobile && sidebarOpen && (
+  <div
+    onClick={() => setSidebarOpen(false)}
+    style={{
+      position: "fixed", inset: 0, background: "rgba(15,23,42,0.35)",
+      zIndex: 9,
+    }}
+  />
+)}
 
       {/* ── Contenido ── */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "auto" }}>

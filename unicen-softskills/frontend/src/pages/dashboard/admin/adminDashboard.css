@@ -21,6 +21,9 @@
   padding: 32px 24px;
   transition: transform 0.3s ease;
   z-index: 1000;
+  overflow-y: auto;        /* ← permite scroll */
+  display: flex;           /* ← necesario para el margin-top: auto del botón Salir */
+  flex-direction: column;
 }
 
 .sidebar-header {
@@ -51,7 +54,7 @@
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
 }
 
 .nav-link {
