@@ -10,8 +10,8 @@ const NAV_ITEMS = [
 export default function StudentLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = window.innerWidth < 768;
-const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
+  const isMobile = () => window.innerWidth < 768;
+const [sidebarOpen, setSidebarOpen] = useState(false);
 
   let authUser = null;
   try { authUser = JSON.parse(localStorage.getItem("authUser")); } catch {}
@@ -30,16 +30,18 @@ const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
 
       {/* ── Sidebar ── */}
       <aside style={{
-        width: sidebarOpen ? 240 : 72,
-        minWidth: sidebarOpen ? 240 : 72,
-        background: "#fff",
-        borderRight: "1px solid #e2e8f0",
-        display: "flex", flexDirection: "column",
-        transition: "width 0.2s ease, min-width 0.2s ease",
-        overflow: "hidden", zIndex: 10,
-        position: isMobile ? "fixed" : "relative",
-  height: isMobile ? "100vh" : "auto",
-      }}>
+  width: 240,
+  minWidth: 240,
+  background: "#fff",
+  borderRight: "1px solid #e2e8f0",
+  display: "flex", flexDirection: "column",
+  overflow: "hidden", zIndex: 1000,
+  position: isMobile() ? "fixed" : "relative",
+  height: isMobile() ? "100vh" : "auto",
+  top: 0, left: 0,
+  transform: isMobile() && !sidebarOpen ? "translateX(-100%)" : "translateX(0)",
+  transition: "transform 0.25s ease",
+}}>
 
         {/* Logo + toggle */}
         <div style={{
@@ -57,12 +59,10 @@ const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
           >
             ☰
           </button>
-          {sidebarOpen && (
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#1e3a8a", whiteSpace: "nowrap" }}>SUAT</div>
-              <div style={{ fontSize: 10, color: "#94a3b8", whiteSpace: "nowrap" }}>Portal Estudiante</div>
-            </div>
-          )}
+       <div>
+  <div style={{ fontSize: 14, fontWeight: 800, color: "#1e3a8a", whiteSpace: "nowrap" }}>SUAT</div>
+  <div style={{ fontSize: 10, color: "#94a3b8", whiteSpace: "nowrap" }}>Portal Estudiante</div>
+</div>
         </div>
 
         {/* Nav */}
@@ -70,7 +70,7 @@ const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
           {NAV_ITEMS.map((item) => {
             const active = location.pathname === item.path;
             return (
-              <Link key={item.path} to={item.path} onClick={() => isMobile && setSidebarOpen(false)} style={{
+              <Link key={item.path} to={item.path} onClick={() => isMobile() && setSidebarOpen(false)} style={{
                 display: "flex", alignItems: "center", gap: 12,
                 padding: "10px 12px", borderRadius: 10, marginBottom: 4,
                 textDecoration: "none",
@@ -130,12 +130,14 @@ const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
         </div>
       </aside>
 
-{isMobile && sidebarOpen && (
+
+{isMobile() && sidebarOpen && (
   <div
     onClick={() => setSidebarOpen(false)}
     style={{
-      position: "fixed", inset: 0, background: "rgba(15,23,42,0.35)",
-      zIndex: 9,
+      position: "fixed", inset: 0,
+      background: "rgba(15,23,42,0.35)",
+      zIndex: 999,
     }}
   />
 )}
@@ -150,6 +152,16 @@ const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
           display: "flex", alignItems: "center", justifyContent: "space-between",
           position: "sticky", top: 0, zIndex: 9,
         }}>
+          <button
+  onClick={() => setSidebarOpen(o => !o)}
+  style={{
+    background: "none", border: "none", cursor: "pointer",
+    fontSize: 20, color: "#64748b", padding: "4px 8px",
+    display: isMobile() ? "flex" : "none",
+  }}
+>
+  ☰
+</button>
           <div style={{ fontSize: 14, color: "#64748b" }}>
             {NAV_ITEMS.find(n => n.path === location.pathname)?.label || "Portal del Estudiante"}
           </div>
