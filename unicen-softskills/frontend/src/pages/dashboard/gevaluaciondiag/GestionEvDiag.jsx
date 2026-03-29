@@ -4,7 +4,7 @@ import "./GestionEvDiag.css";
 import MatrizCursosCompetencias from "./MatrizCursosCompetencias";
 
 
-const API = "http://localhost:5000/api";
+const API = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
 async function apiJson(url, options = {}) {
   const res = await fetch(url, {

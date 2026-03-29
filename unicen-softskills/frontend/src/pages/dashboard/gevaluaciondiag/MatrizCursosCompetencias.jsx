@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-const API = "http://localhost:5000/api";
+const API = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
 async function apiJson(url, options = {}) {
   const res = await fetch(url, {

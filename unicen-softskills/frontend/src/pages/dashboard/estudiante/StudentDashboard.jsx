@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 
-const API = "http://localhost:5000/api";
+const API = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
 const ICONOS_CURSOS = [
   { color: "#1e3a8a", emoji: "🏆" },

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import "./TestDiagnostico.css";
 import { useLocation, useNavigate } from "react-router-dom";
 
-const API = "http://localhost:5000/api";
+const API = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
 function useQuery() {
   const { search } = useLocation();

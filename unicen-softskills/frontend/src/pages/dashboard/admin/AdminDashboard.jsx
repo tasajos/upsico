@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import "./AdminDashboard.css";
 
-const API = "http://localhost:5000/api";
+const API = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
 function clampPercent(v) {
   const n = Number(v || 0);

@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { pool } from "./db.js";
 import diagnosticoRoutes from "./routes/diagnostico.routes.js";
+import path from "path";
+import { fileURLToPath } from "url";
 import matrizRoutes from "./routes/matriz.routes.js";
 import usuariosRoutes from "./routes/usuarios.routes.js";
 import authRoutes from "./routes/auth.routes.js";
@@ -11,7 +13,14 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({ origin: "http://localhost:5173" }));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+//app.use(cors({ origin: "http://localhost:5173" }));
+app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
+
+
+
 app.use(express.json());
 app.use("/api/diagnostico", diagnosticoRoutes);
 app.use("/api/matriz", matrizRoutes);
@@ -29,6 +38,12 @@ app.get("/api/db-test", async (req, res) => {
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+// Servir frontend
+app.use(express.static(path.join(__dirname, "../../frontend/dist")));
+app.get("/{*path}", (req, res) => {
+  res.sendFile(path.join(__dirname, "../../frontend/dist/index.html"));
 });
 
 const PORT = process.env.PORT || 5000;

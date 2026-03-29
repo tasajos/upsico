@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 export default function StudentEvaluaciones() {
   const navigate = useNavigate();
-  const API = "http://localhost:5000/api";
+ const API = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
