@@ -11,29 +11,46 @@ router.get("/", async (req, res) => {
   try {
     const { q, rol, estado } = req.query;
 
-    let sql = "SELECT id, nombres, apellidos, email, rol, estado, created_at FROM usuarios WHERE 1=1";
+    const where = ["1=1"];
     const params = [];
 
     if (q) {
-      sql += " AND (nombres LIKE ? OR apellidos LIKE ? OR email LIKE ?)";
+      where.push("(u.nombres LIKE ? OR u.apellidos LIKE ? OR u.email LIKE ?)");
       const search = `%${q}%`;
       params.push(search, search, search);
     }
 
     if (rol) {
-      sql += " AND rol = ?";
+      where.push("u.rol = ?");
       params.push(rol);
     }
 
     if (estado) {
-      sql += " AND estado = ?";
+      where.push("u.estado = ?");
       params.push(estado);
     }
 
-    sql += " ORDER BY id DESC";
+    const sql = `
+      SELECT
+        u.id, u.nombres, u.apellidos, u.email, u.rol, u.estado, u.created_at,
+        CASE
+          WHEN u.rol != 'Estudiante' THEN NULL
+          WHEN di.id IS NOT NULL AND di.habilitado = 0 THEN 'completada'
+          ELSE 'pendiente'
+        END AS evaluacion_estado
+      FROM usuarios u
+      LEFT JOIN (
+        SELECT di2.usuario_id, di2.id, di2.habilitado
+        FROM diagnostico_intento di2
+        INNER JOIN diagnostico_test dt ON di2.test_id = dt.id
+        WHERE dt.activo = 1
+        ORDER BY di2.creado_en DESC
+      ) di ON di.usuario_id = u.id
+      WHERE ${where.join(" AND ")}
+      ORDER BY u.id DESC
+    `;
 
     const [rows] = await pool.query(sql, params);
-
     res.json(rows);
   } catch (err) {
     console.error(err);

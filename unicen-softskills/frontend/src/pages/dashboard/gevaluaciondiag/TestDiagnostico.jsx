@@ -42,48 +42,67 @@ export default function TestDiagnostico() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [bloqueado, setBloqueado] = useState(false);
+const [intentoPrevio, setIntentoPrevio] = useState(null);
 
-  useEffect(() => {
-    let mounted = true;
 
-    async function load() {
-      try {
-        setLoading(true);
-        setError("");
-        setResult(null);
-        setAnswers({});
 
-        const url = testId
-          ? `${API}/diagnostico/tests/${encodeURIComponent(testId)}`
-          : `${API}/diagnostico/test-activo`;
+ useEffect(() => {
+  let mounted = true;
 
-        const res = await fetch(url);
-        const data = await res.json().catch(() => ({}));
+  async function checkYLoad() {
+    try {
+      setLoading(true);
+      setError("");
+      setResult(null);
+      setAnswers({});
 
-        if (!res.ok || !data.ok) {
-          throw new Error(data?.message || "No se pudo cargar el test.");
+      // 1) Verificar bloqueo PRIMERO (solo para estudiantes logueados)
+      if (isStudent && authUser?.id) {
+        const nombre = `${authUser.nombres || ""} ${authUser.apellidos || ""}`.trim();
+        setEstudianteNombre(nombre);
+
+        const estadoRes = await fetch(`${API}/diagnostico/estado/${authUser.id}`);
+        const estadoData = await estadoRes.json().catch(() => ({}));
+
+        if (estadoData.ok && !estadoData.puede_rendir) {
+          if (mounted) {
+            setBloqueado(true);
+            setIntentoPrevio(estadoData.intento ?? null);
+            setLoading(false);
+          }
+          return; // ← corta acá, no carga el test
         }
-
-        if (!mounted) return;
-
-        setTest(data.test);
-        setPreguntas(data.preguntas || []);
-        setEscala(data.escala || []);
-      } catch (e) {
-        if (mounted) setError(e.message || "Error cargando test.");
-      } finally {
-        if (mounted) setLoading(false);
       }
-    }
 
-    if (isStudent && authUser) {
-      const nombre = `${authUser.nombres || ""} ${authUser.apellidos || ""}`.trim();
-      setEstudianteNombre(nombre);
-    }
+      // 2) Cargar el test solo si puede rendir
+      const url = testId
+        ? `${API}/diagnostico/tests/${encodeURIComponent(testId)}`
+        : `${API}/diagnostico/test-activo`;
 
-    load();
-    return () => { mounted = false; };
-  }, [testId, isStudent, authUser]);
+      const res = await fetch(url);
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.ok) {
+        throw new Error(data?.message || "No se pudo cargar el test.");
+      }
+
+      if (!mounted) return;
+
+      setTest(data.test);
+      setPreguntas(data.preguntas || []);
+      setEscala(data.escala || []);
+
+    } catch (e) {
+      if (mounted) setError(e.message || "Error cargando test.");
+    } finally {
+      if (mounted) setLoading(false);
+    }
+  }
+
+  checkYLoad();
+  return () => { mounted = false; };
+}, [testId, isStudent, authUser]);
 
   const answeredCount = useMemo(() => Object.keys(answers).length, [answers]);
   const totalQuestions = preguntas.length;
@@ -205,6 +224,42 @@ export default function TestDiagnostico() {
       </div>
     );
   }
+
+  if (bloqueado) {
+    return (
+      <div className="td-wrap">
+        <div className="td-card" style={{ textAlign: "center", padding: 40 }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
+          <h2 style={{ color: "#1e3a8a", marginBottom: 8 }}>Evaluación ya completada</h2>
+          <p style={{ color: "#64748b", marginBottom: 20 }}>
+            Ya realizaste la evaluación diagnóstica. Podés volver a rendirla
+            cuando el administrador habilite tu acceso.
+          </p>
+          {intentoPrevio && (
+            <div style={{
+              background: "#eff6ff", border: "1px solid #bfdbfe",
+              borderRadius: 12, padding: "12px 20px", marginBottom: 20,
+              display: "inline-block",
+            }}>
+              <div style={{ color: "#64748b", fontSize: 12 }}>Tu último resultado</div>
+              <div style={{ fontSize: 32, fontWeight: 900, color: "#1e3a8a" }}>
+                {intentoPrevio.puntaje} pts
+              </div>
+              <div style={{ fontWeight: 700, color: "#1e3a8a" }}>
+                Nivel: {intentoPrevio.nivel}
+              </div>
+            </div>
+          )}
+          <br />
+          <button className="td-back" onClick={() => navigate(backPath)}>
+            ← Volver al inicio
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+
 
   return (
     <div className="td-wrap">

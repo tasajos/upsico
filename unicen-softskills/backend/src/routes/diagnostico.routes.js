@@ -119,10 +119,10 @@ router.post("/enviar", async (req, res) => {
       await conn.beginTransaction();
 
       const [insIntento] = await conn.query(
-      `INSERT INTO diagnostico_intento
-    (test_id, estudiante_nombre, carrera, semestre, fecha_aplicacion, total_puntaje, nivel, usuario_id)
-   VALUES (?,?,?,?,?,?,?,?)`,
-  [test_id, estudiante_nombre, carrera, String(semestre), fecha_aplicacion, total, nivel, usuario_id || null]
+   `INSERT INTO diagnostico_intento
+    (test_id, estudiante_nombre, carrera, semestre, fecha_aplicacion, total_puntaje, nivel, usuario_id, habilitado)
+   VALUES (?,?,?,?,?,?,?,?,?)`,
+  [test_id, estudiante_nombre, carrera, String(semestre), fecha_aplicacion, total, nivel, usuario_id || null, usuario_id ? 0 : 1]
 );
 
       const intento_id = insIntento.insertId;
@@ -679,6 +679,62 @@ router.get("/mi-ultimo-resultado", async (req, res) => {
     });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+router.get("/estado/:usuario_id", async (req, res) => {
+  const { usuario_id } = req.params;
+  try {
+    const [rows] = await pool.query(
+      `SELECT di.id, di.habilitado, di.total_puntaje, di.nivel, di.fecha_aplicacion
+       FROM diagnostico_intento di
+       INNER JOIN diagnostico_test dt ON di.test_id = dt.id
+       WHERE di.usuario_id = ? AND dt.activo = 1
+       ORDER BY di.creado_en DESC
+       LIMIT 1`,
+      [usuario_id]
+    );
+
+    if (!rows.length) {
+      return res.json({ ok: true, puede_rendir: true });
+    }
+
+    const intento = rows[0];
+    return res.json({
+      ok: true,
+      puede_rendir: intento.habilitado === 1,
+      intento: {
+        id: intento.id,
+        puntaje: intento.total_puntaje,
+        nivel: intento.nivel,
+        fecha: intento.fecha_aplicacion,
+      },
+    });
+  } catch (e) {
+    return res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// PUT /api/diagnostico/rehabilitar/:usuario_id
+// Admin rehabilita al estudiante para el test activo
+router.put("/rehabilitar/:usuario_id", async (req, res) => {
+  const { usuario_id } = req.params;
+  try {
+    const [result] = await pool.query(
+      `UPDATE diagnostico_intento di
+       INNER JOIN diagnostico_test dt ON di.test_id = dt.id
+       SET di.habilitado = 1
+       WHERE di.usuario_id = ? AND dt.activo = 1`,
+      [usuario_id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ ok: false, message: "No se encontró intento para este usuario en el test activo." });
+    }
+
+    return res.json({ ok: true, message: "Estudiante rehabilitado correctamente." });
+  } catch (e) {
+    return res.status(500).json({ ok: false, message: e.message });
   }
 });
 
